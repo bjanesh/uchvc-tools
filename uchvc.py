@@ -26,6 +26,8 @@ for file_ in os.listdir("./"):
     if file_.endswith(".fits"):
         unpacked = True
         
+# this comment is a test of the git gutter functionality in Chocolat
+        
 # unpack all *.fz
 if not unpacked :
     funpack_cmd = funpack_path+' *.fz'
