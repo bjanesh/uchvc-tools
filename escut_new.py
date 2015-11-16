@@ -6,8 +6,16 @@ import sewpy
 import os
 from matplotlib.path import Path
 
+image = "AGC227983_g_sh.fits"
 
-image = "AGC174540_i_sh.fits"
+iraf.images(_doprint=0)
+iraf.tv(_doprint=0)
+iraf.ptools(_doprint=0)
+iraf.noao(_doprint=0)
+iraf.digiphot(_doprint=0)
+iraf.photcal(_doprint=0)
+iraf.apphot(_doprint=0)  
+iraf.imutil(_doprint=0)
 
 iraf.unlearn(iraf.phot,iraf.datapars,iraf.photpars,iraf.centerpars,iraf.fitskypars)
 iraf.apphot.phot.setParam('interactive',"no")
@@ -18,7 +26,8 @@ iraf.datapars.setParam('ccdread',"rdnoise")
 iraf.datapars.setParam('exposure',"exptime")
 iraf.datapars.setParam('airmass',"airmass")
 iraf.datapars.setParam('filter',"filter")
-iraf.datapars.setParam('obstime',"time-obs")
+# iraf.datapars.setParam('obstime',"time-obs")
+iraf.datapars.setParam('obstime',"date-obs")
 iraf.datapars.setParam('sigma',"INDEF")
 iraf.photpars.setParam('zmag',0.)
 iraf.centerpars.setParam('cbox',9.)
@@ -40,6 +49,7 @@ if not os.path.isfile(image[0:-5]+'.txdump'):
     
     # get a really rough estimate of the stellar FWHM in the image to set apertures
     ap1x = np.median(fwhms[flags == 0]) # only use isolated detections of stars, this is the 1x aperture
+    print ap1x
     ap2x = 2.0*ap1x 
     
     # now pull out all the sources with 4x background -- let sextractor measure that for us
@@ -137,28 +147,28 @@ with open('escutUNIQUE.pos','w+') as f:
     for i,blah in enumerate(extrasSTD):
         print >> f, xpos[blah-1], ypos[blah-1]
         
-fwhmcheck = np.loadtxt('testfwhmREG.log', usecols=(10,), unpack=True)
-print np.median(fwhmcheck), fwhmcheck.std()
-fwchk = np.where(np.abs(fwhmcheck-np.median(fwhmcheck)) > fwhmcheck.std())
-fwmag = mag2x[sources]
+# fwhmcheck = np.loadtxt('testfwhmREG.log', usecols=(10,), unpack=True)
+# print np.median(fwhmcheck), fwhmcheck.std()
+# fwchk = np.where(np.abs(fwhmcheck-np.median(fwhmcheck)) > fwhmcheck.std())
+# fwmag = mag2x[sources]
 
-plt.clf()
-plt.scatter(fwmag, fwhmcheck, edgecolor='none', facecolor='black')
-plt.scatter(fwmag[fwchk], fwhmcheck[fwchk], edgecolor='none', facecolor='red')
-plt.hlines([np.median(fwhmcheck)], -12, 0, colors='red', linestyle='dashed')
-plt.hlines([np.median(fwhmcheck)+fwhmcheck.std(), np.median(fwhmcheck)-fwhmcheck.std()], -12, 0, colors='red', linestyle='dotted')
-plt.ylim(0,20)
-plt.xlim(-12,0)
-plt.ylabel('fwhm')
-plt.xlabel('$m_{2xfwhm}$')
-plt.savefig('fwhmcheck.pdf')
+# plt.clf()
+# plt.scatter(fwmag, fwhmcheck, edgecolor='none', facecolor='black')
+# # plt.scatter(fwmag[fwchk], fwhmcheck[fwchk], edgecolor='none', facecolor='red')
+# plt.hlines([np.median(fwhmcheck)], -12, 0, colors='red', linestyle='dashed')
+# plt.hlines([np.median(fwhmcheck)+fwhmcheck.std(), np.median(fwhmcheck)-fwhmcheck.std()], -12, 0, colors='red', linestyle='dotted')
+# plt.ylim(0,20)
+# plt.xlim(-12,0)
+# plt.ylabel('fwhm')
+# plt.xlabel('$m_{2xfwhm}$')
+# plt.savefig('fwhmcheck.pdf')
 
 plt.clf()
 plt.scatter(diff, mag2x, edgecolor='none', facecolor='black', s=4)
 
 plt.scatter(diffCut, magCut, edgecolor='none', facecolor='blue', s=4)
 plt.fill_betweenx(bin_centers, np.median(diffCut)+2.5*bin_stds, np.median(diffCut)-2.5*bin_stds, facecolor='red', edgecolor='none', alpha=0.4, label='2x RMS sigma clipping region')
-plt.scatter((diff[sources])[fwchk], (mag2x[sources])[fwchk], edgecolor='none', facecolor='red', s=4)
+# plt.scatter((diff[sources])[fwchk], (mag2x[sources])[fwchk], edgecolor='none', facecolor='red', s=4)
 plt.ylim(0,-12)
 plt.xlabel('$m_{2xfwhm} - m_{1xfwhm}$')
 plt.ylabel('$m_{2xfwhm}$')
