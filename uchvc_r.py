@@ -67,7 +67,7 @@ if not os.path.isfile(title_string+'.imsets') :
 # only open the images in ds9 and 
 # if not (os.path.isfile('background_regions.txt') or os.path.isfile('mask.reg')):
 # iraf.tv.display(image=fits_g, frame=1)
-iraf.tv.display(image=fits_i, frame=1)
+# iraf.tv.display(=fits_i, frame=1)
 
 kg = 0.15
 ki = 0.10
@@ -331,17 +331,17 @@ ap_cand1_g = [(ap_gx[i],ap_gy[i],float(ap_fwhm_g[i]),float(ap_peak_g[i]),float(a
 ap_cand1_i = [(ap_ix[i],ap_iy[i],float(ap_fwhm_i[i]),float(ap_peak_i[i]),float(ap_mag_i[i])) for i in range(len(ap_ix)) if (ap_peak_i[i] != 'INDEF' and ap_fwhm_i[i] != 'INDEF' and ap_mag_i[i] != 'INDEF')]
 
 if fwhm_i < 20.0 :
-    ap_cand_g = [ap_cand1_g[i] for i in range(len(ap_cand1_g)) if (20000. < ap_cand1_g[i][3] < 50000.)]
-    ap_cand_i = [ap_cand1_i[i] for i in range(len(ap_cand1_i)) if (20000. < ap_cand1_i[i][3] < 50000.)]
-    # print ap_cand_g
+    ap_cand_g = [ap_cand1_g[i] for i in range(len(ap_cand1_g)) if (5000. < ap_cand1_g[i][3] < 15000.)]
+    ap_cand_i = [ap_cand1_i[i] for i in range(len(ap_cand1_i)) if (5000. < ap_cand1_i[i][3] < 15000.)]
+    # print ap_cand_g, ap_cand_i
     ap_avg_g1 = np.mean([ap_cand_g[i][2] for i in range(len(ap_cand_g))])
     ap_avg_i1 = np.mean([ap_cand_i[i][2] for i in range(len(ap_cand_i))])
 
     ap_std_g1 = np.std([ap_cand_g[i][2] for i in range(len(ap_cand_g))])
     ap_std_i1 = np.std([ap_cand_i[i][2] for i in range(len(ap_cand_i))])
     # print ap_avg_g1,ap_avg_i1,ap_std_g1,ap_std_i1
-    ap_stars_g = [ap_cand_g[i] for i in range(len(ap_cand_g)) if ((ap_avg_g1-ap_std_g1) < ap_cand_g[i][2] < (ap_avg_g1+ap_std_g1))]
-    ap_stars_i = [ap_cand_i[i] for i in range(len(ap_cand_i)) if ((ap_avg_i1-ap_std_i1) < ap_cand_i[i][2] < (ap_avg_i1+ap_std_i1))]
+    ap_stars_g = [ap_cand_g[i] for i in range(len(ap_cand_g))]# if ((ap_avg_g1-ap_std_g1) < ap_cand_g[i][2] < (ap_avg_g1+ap_std_g1))]
+    ap_stars_i = [ap_cand_i[i] for i in range(len(ap_cand_i))]# if ((ap_avg_i1-ap_std_i1) < ap_cand_i[i][2] < (ap_avg_i1+ap_std_i1))]
     # print len(ap_stars_g), len(ap_stars_i)
     ap_avg_g = np.mean([ap_stars_g[i][2] for i in range(len(ap_stars_g))])
     ap_avg_i = np.mean([ap_stars_i[i][2] for i in range(len(ap_stars_i))])
