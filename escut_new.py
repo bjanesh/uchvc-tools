@@ -1,3 +1,5 @@
+#! /usr/local/bin/python
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -151,6 +153,10 @@ fwhmcheck = np.loadtxt('testfwhmREG.log', usecols=(10,), unpack=True)
 print np.median(fwhmcheck), fwhmcheck.std()
 fwchk = np.where(np.abs(fwhmcheck-np.median(fwhmcheck)) > fwhmcheck.std())
 fwmag = mag2x[sources]
+
+with open('escutCON_i.pos','w+') as f:
+    for i,blah in enumerate(xpos[sources]):
+        print >> f, (xpos[sources])[i], (ypos[sources])[i], (diff[sources])[i]
 
 plt.clf()
 plt.scatter(fwmag, fwhmcheck, edgecolor='none', facecolor='black')
