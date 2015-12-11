@@ -60,24 +60,16 @@ def escut(image, pos_file, fwhm):
         
         # use the input fwhm measurement
         # ap1x = fwhm_est
+
+        
+        # xpos = datatable['X_IMAGE']
+        # ypos = datatable['Y_IMAGE']
+        # fwhm = datatable['FWHM_IMAGE']
+        # flags = datatable['FLAGS']
+        # idno = datatable['NUMBER']
         ap1x = np.median(fwhm_good) # only use isolated detections of stars, this is the 1x aperture
         # print ap1x
-        ap2x = 2.0*ap1x 
-        
-        # now pull out all the sources with 4x background -- let sextractor measure that for us
-        # fullfwhm = sewpy.SEW(
-        #     params = ["X_IMAGE","Y_IMAGE","FWHM_IMAGE","FLAGS","NUMBER"],
-        #     config = {"DETECT_THRESH":4.0},
-        #     sexpath = "sex"
-        # )
-        # 
-        # out2 = fullfwhm(image)["table"]
-        # 
-        # xpos = out2['X_IMAGE']
-        # ypos = out2['Y_IMAGE']
-        # fwhm = out2['FWHM_IMAGE']
-        # flags = out2['FLAGS']
-        # idno = out2['NUMBER']
+        ap2x = 2.0*ap1x
         
         # these = [ i for i,id in enumerate(idno) if (flags[i] == 0)]
         
@@ -97,9 +89,9 @@ def escut(image, pos_file, fwhm):
     # idno = np.loadtxt(image[0:-5]+'.escut.pos', usecols=(3,), dtype=int, unpack=True)
     xpos, ypos = np.loadtxt(pos_file, usecols=(0,1), unpack=True)
     
-    # keepIndex = iraf_id - 1
-    # 
-    # xpos, ypos, fwhmcheck = xpos[keepIndex], ypos[keepIndex], fwhmcheck[keepIndex]
+    keepIndex = iraf_id - 1
+    
+    xpos, ypos, fwhm = xpos[keepIndex], ypos[keepIndex], fwhm[keepIndex]
     
     # print idno.size, iraf_id.size, xpos.size
     
@@ -165,13 +157,13 @@ def escut(image, pos_file, fwhm):
     # print sources
     
     with open('escutREG_i.pos','w+') as f:
-        for i,blah in enumerate((xpos[good])[sources]):
-            print >> f, ((xpos[good])[sources])[i], ((ypos[good])[sources])[i], (diff[sources])[i]
+        for i,blah in enumerate(xpos[sources]):
+            print >> f, (xpos[sources])[i], (ypos[sources])[i], (diff[sources])[i]
     
     magCut = mag2x[sources]
-    fwhmCut = fwhm_good[sources]   
-    xCut = (xpos[good])[sources]
-    yCut = (ypos[good])[sources] 
+    fwhmCut = fwhm[sources]   
+    xCut = xpos[sources]
+    yCut = ypos[sources] 
     diffCut = diff[sources]    
     
     # find the sources that are in the std method but not the region method
