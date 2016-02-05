@@ -6,7 +6,7 @@ from matplotlib.path import Path
 # import matplotlib.pyplot as plt
 from subprocess import call
 # from astropy import wcs
-import sewpy
+# import sewpy
 from astropy.io import fits
 from pyraf import iraf
 from escut_new import escut 
@@ -38,8 +38,10 @@ for file_ in os.listdir("./"):
         fits_file_i = file_
     if file_.endswith("g.fits"):
         fits_file_g = file_
-    if file_.endswith("g.fits.fz"):    # get the title string from the zipped g image 
-        title_string = file_[0:9]        # which should always exist in the directory
+
+path = os.getcwd()
+steps = path.split('/')
+title_string = steps[-1].upper()        # which should always exist in the directory
         
 # copy the good region (no cell gaps) to a new file        
 fits_g = title_string+'_g_sh.fits'
@@ -97,8 +99,12 @@ fits_h_g = fits.open(fits_g)
 # fwhm_g = fits_h_g[0].header['F_AVGSEE']/0.11
 
 # get steven's/QR's estimate of the image FWHMPSF
-fwhm_i = fits_h_i[0].header['FWHMPSF']
-fwhm_g = fits_h_g[0].header['FWHMPSF']
+try:
+    fwhm_i = fits_h_i[0].header['FWHMPSF']
+    fwhm_g = fits_h_g[0].header['FWHMPSF']
+except:
+    fwhm_i = fits_h_i[0].header['SEEING']/0.11
+    fwhm_g = fits_h_g[0].header['SEEING']/0.11
 
 print 'Target Coordinates :: ',fits_h_i[0].header['RA'],fits_h_i[0].header['DEC']
 print 'Image header FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i)
@@ -151,7 +157,7 @@ if not os.path.isfile(fits_g+'.coo.1') :
     iraf.datapars.setParam('fwhmpsf',fwhm_g,check=1)
     iraf.datapars.setParam('sigma',bg_g,check=1)
     
-    iraf.findpars.setParam('threshold',3.0)
+    iraf.findpars.setParam('threshold',4.0)
     iraf.apphot.daofind(image=fits_g, verbose="no", verify='no')
 #     
 #     # i image
@@ -159,7 +165,7 @@ if not os.path.isfile(fits_i+'.coo.1') :
     iraf.datapars.setParam('fwhmpsf',fwhm_i,check=1)
     iraf.datapars.setParam('sigma',bg_i,check=1)
     
-    iraf.findpars.setParam('threshold',3.0)
+    iraf.findpars.setParam('threshold',4.0)
     iraf.apphot.daofind(image=fits_i, verbose="no", verify='no')
 
 #         # now pull out all the sources with 4x background -- let sextractor measure that for us
@@ -511,7 +517,8 @@ else :
 #     print 'Something went wrong running escut. Try running it outside of this script.'
 
 # escut_g = escut(fits_g, 'tol7_g.pos', ap_fwhm_g)
-escut_i = escut(fits_i, 'tol7_i.pos', ap_fwhm_i)
+# print ap_peak_i.size, ap_fwhm_i.size
+escut_i = escut(fits_i, 'tol7_i.pos', ap_fwhm_i, ap_peak_i)
     
 # finally rephot just the good stuff to get a good number
 if os.path.isfile('escut_g.pos') :
@@ -672,7 +679,7 @@ for i in range(len(ix)) :
 f3.close()
 
 plt.clf()
-plt.scatter(gmi, i_mag,  color='black', marker='o', edgecolors='none')
+plt.scatter(gmi, i_mag, s=2, color='black', marker='o', edgecolors='none')
 plt.ylabel('$i$')
 plt.xlabel('$(g-i)$')
 plt.ylim(25,15)

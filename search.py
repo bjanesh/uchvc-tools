@@ -7,6 +7,7 @@ from matplotlib.path import Path
 from matplotlib import cm
 from astropy import wcs
 from astropy.io import fits
+from tqdm import tqdm
 try :
     from scipy import ndimage
 except ImportError :
@@ -120,7 +121,7 @@ def main(argv):
     
     with open(out_file, 'w+') as f1:
         print >> f1, '# dm mpc x_cent y_cent ra_cent dec_cent S(x,y) N %'
-        for dm in np.arange(21.0,27.5,0.01):
+        for dm in tqdm(np.arange(21.0,27.5,0.01)):
             mpc = pow(10,((dm + 5.)/5.))/1000000.
             # print '================================================================================'
             # print 'DM = {0:6.3f}, dist (Mpc) = {1:6.3f}'.format(dm, mpc)
@@ -252,8 +253,8 @@ def main(argv):
             circ_c_x = (yedges[y_cent]/60.)+ra_c
             circ_c_y = (xedges[x_cent]/60.)+dec_c
             circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
-            
-            print >> f1, '{0:9.3f} {1:9.3f} {2:6.3f} {3:6.3f} {4:6.3f} {5:6.3f} {6:6.3f} {7:6.3f} {8:6.3f} {9:4d} {10:3d}'.format(100.0, 100.0, dm, mpc, yedges[y_cent_S], xedges[x_cent_S], circ_c_x, circ_c_y, S[x_cent_S][y_cent_S], n_in_filter, int(percentile))
+            # print circ_pix_x, circ_pix_y
+            print >> f1, '{0:9.5f} {1:9.5f} {2:6.3f} {3:6.3f} {4:6.3f} {5:6.3f} {6:6.3f} {7:6.3f} {8:6.3f} {9:4d} {10:3d}'.format(float(-circ_pix_x), float(circ_pix_y), dm, mpc, yedges[y_cent_S], xedges[x_cent_S], circ_c_x, circ_c_y, S[x_cent_S][y_cent_S], n_in_filter, int(percentile))
     
 def deg2HMS(ra='', dec='', round=False):
   RA, DEC, rs, ds = '', '', '', ''
