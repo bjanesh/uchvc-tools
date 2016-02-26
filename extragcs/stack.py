@@ -388,7 +388,7 @@ if not os.path.isfile(objectName+'_V.fits'):
     # iraf.imutil.imarith(objectName+'_V.2.fits','/','checkV.fits',objectName+'_V.fits', verbose='yes')
 if not os.path.isfile(objectName+'_R.fits'):
     iraf.immatch.imcombine('scsubsh//@mscFilesR.list', objectName+'_R.1.fits')
-    iraf.imutil.imarith(objectName+'_R.1.fits','+',bgMeanDict[refImageB],objectName+'_R.fits', verbose='yes')
+    iraf.imutil.imarith(objectName+'_R.1.fits','+',bgMeanDict[refImageR],objectName+'_R.fits', verbose='yes')
     # iraf.imutil.imarith('checkR.fits','*',bgMeanDict[refImageR],'checkR.2.fits', verbose='yes')
     # iraf.imutil.imarith(objectName+'_R.1.fits','+','checkR.2.fits',objectName+'_R.2.fits', verbose='yes')
     # iraf.imutil.imarith(objectName+'_R.2.fits','/','checkR.fits',objectName+'_R.fits', verbose='yes')

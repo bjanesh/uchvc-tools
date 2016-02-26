@@ -10,6 +10,9 @@ from astropy.io import fits
 import distfit
 from pyraf import iraf
 import scipy.stats as ss
+from photutils import detect_sources, source_properties, properties_table
+from photutils.utils import random_cmap
+
 try :
 	from scipy import ndimage
 except ImportError :
@@ -236,13 +239,19 @@ def main(argv):
 		# print "Convolving for m-M =",dm
 		grid_gaus = ndimage.filters.gaussian_filter(grid, sig, mode='constant', cval=0)
 		S = np.array(grid_gaus*0)
-		S_th = 3.0
+		S_th = 2.0
 		
 		# print grid_gaus[0:44][0:44]
 		
 		grid_mean = np.mean(grid_gaus)
 		grid_sigma = np.std(grid_gaus)
 		S = (grid_gaus-grid_mean)/grid_sigma
+		
+		segm = detect_sources(S, S_th, npixels=5)
+		props = source_properties(S, segm)
+		columns = ['id', 'xcentroid', 'ycentroid', 'max_value', 'maxval_pos', 'area']
+		tbl = properties_table(props, columns=columns)
+		print tbl
 		
 		above_th = [(int(i),int(j)) for i in range(len(S)) for j in range(len(S[i])) if (S[i][j] >= S_th)]
 		
@@ -457,6 +466,7 @@ def main(argv):
 		extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
 		plt.imshow(S, extent=extent, interpolation='nearest',cmap=cm.gray)
 		cbar_S = plt.colorbar()
+		plt.imshow(segm, extent=extent, cmap=random_cmap(segm.max+1), alpha=0.5)
 		# cbar_S.tick_params(labelsize=10)
 		plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
 		plt.plot(x_circr,y_circr,linestyle='-', color='gold')

@@ -118,11 +118,11 @@ def escut(image, pos_file, fwhm):
     while nRemoved != 0:
         nBefore = diffCut.size
         magSort = np.sort(magdiff, order='mag')
-        # peakVal = np.mean(magSort['diff'][:25])
-        peakVal = np.median(diffCut)
+        peakVal = np.median(magSort['diff'][250:500])
+        # peakVal = np.median(diffCut)
         print peakVal
         diffCheck = np.where(abs(peakVal-diffCut) < 2.5*diffCut.std())#[i for i,d in enumerate(diff) if (-0.5 < d < 0.0)]
-        print diffCheck
+        # print diffCheck
         # 
         diffCut = diffCut[diffCheck]
         nRemoved = nBefore - diffCut.size
@@ -144,8 +144,9 @@ def escut(image, pos_file, fwhm):
     bin_centers = bin_edges[1:] - bin_width/2
     # print bin_meds, bin_stds
     
-    left_edge = np.array(zip(peakVal-3.0*bin_stds, bin_centers))
-    right_edge = np.flipud(np.array(zip(peakVal+3.0*bin_stds, bin_centers)))
+    bin_hw = 3.0*bin_stds
+    left_edge = np.array(zip(peakVal-bin_hw, bin_centers))
+    right_edge = np.flipud(np.array(zip(peakVal+bin_hw, bin_centers)))
     # print left_edge, right_edge
     verts = np.vstack((left_edge, right_edge))
     # print verts
@@ -176,9 +177,10 @@ def escut(image, pos_file, fwhm):
     #         print >> f, xpos[blah-1], ypos[blah-1]
             
     # fwhmcheck = np.loadtxt('testfwhmREG.log', usecols=(10,), unpack=True)
-    print np.median(fwhmCut), fwhmCut.std()
-    fwchk = np.where(np.abs(fwhmCut-np.median(fwhmCut)) > 2.5*fwhmCut.std())
-    drop = np.abs(fwhmCut-np.median(fwhmCut)) > 2.5*fwhmCut.std()
+    fwhmCut2 = fwhmCut[np.where(magCut < -4.0)]
+    print np.median(fwhmCut2), fwhmCut2.std()
+    fwchk = np.where(np.abs(fwhmCut-np.median(fwhmCut2)) > 10.0*fwhmCut2.std())
+    drop = np.abs(fwhmCut-np.median(fwhmCut2)) > 10.0*fwhmCut2.std()
     # fwmag = mag2x[sources]
     
     with open('escutVBAD_i.pos','w+') as f:
@@ -195,7 +197,7 @@ def escut(image, pos_file, fwhm):
             if not drop[i]:
                 print >> f, xCut[i], yCut[i]
     
-    plt.fill_betweenx(bin_centers, peakVal+3.0*bin_stds, peakVal-3.0*bin_stds, facecolor='red', edgecolor='none', alpha=0.4, label='2x RMS sigma clipping region')
+    plt.fill_betweenx(bin_centers, peakVal+bin_hw, peakVal-bin_hw, facecolor='red', edgecolor='none', alpha=0.4, label='2x RMS sigma clipping region')
     plt.scatter(diffCut[fwchk], magCut[fwchk], edgecolor='none', facecolor='red', s=4)
     plt.ylim(0,-12)
     plt.xlabel('$m_{2x} - m_{1x}$')
