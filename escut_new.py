@@ -1,5 +1,5 @@
 #! /usr/local/bin/python
-def escut(image, pos_file, fwhm):
+def escut(image, pos_file, fwhm, peak):
     # input image file name, file name with matched source positions, **np.array of fwhm measurements for each source
     import numpy as np
     import matplotlib.pyplot as plt
@@ -43,6 +43,11 @@ def escut(image, pos_file, fwhm):
     fwhm[indefs] = 99.999
     fwhm = fwhm.astype(float)
     fwhm_good = fwhm[good].astype(float)
+
+    indefs = np.where(peak=='INDEF')
+    peak[indefs] = -999.999
+    peak = peak.astype(float)
+    peak_good = peak[good].astype(float)
     
     if not os.path.isfile(image[0:-5]+'.txdump'):
         # findavgfwhm = sewpy.SEW(
@@ -91,7 +96,7 @@ def escut(image, pos_file, fwhm):
     
     keepIndex = iraf_id - 1
     
-    xpos, ypos, fwhm = xpos[keepIndex], ypos[keepIndex], fwhm[keepIndex]
+    xpos, ypos, fwhm, peak = xpos[keepIndex], ypos[keepIndex], fwhm[keepIndex], peak[keepIndex]
     
     # print idno.size, iraf_id.size, xpos.size
     
@@ -103,26 +108,38 @@ def escut(image, pos_file, fwhm):
     yCut = ypos#[good]
     idCut = iraf_id
     fwhmCut = fwhm#_good
+    peakCut = peak
+    
+    print peakCut.size, magCut.size, diffCut.size
     
     print diffCut.size, 0, np.median(diffCut), diffCut.std()
     nRemoved = 1   
+    
+    # plt.clf()
+    # plt.scatter(peakCut, magCut, edgecolor='none')
+    # plt.savefig('peaktest.pdf')
     
     plt.clf()
     # plt.hlines(bin_edges, -2, 1, colors='red', linestyle='dashed')
     plt.scatter(diff, mag2x, edgecolor='none', facecolor='black', s=4)
     # plt.scatter(diffCut, magCut, edgecolor='none', facecolor='blue', s=4)
-    magdiff = zip(magCut.tolist(), diffCut.tolist(), idCut.tolist())
-    dtype = [('mag',float), ('diff', float), ('id', int)]
+    magdiff = zip(magCut.tolist(), diffCut.tolist(), peakCut.tolist(), idCut.tolist())
+    dtype = [('mag',float), ('diff', float), ('peak', float), ('id', int)]
     magdiff = np.array(magdiff, dtype=dtype)
+    
+    magSort = np.sort(magdiff, order='peak')
+
+    peakRange = (magSort['peak'] > 20000.0) & (magSort['peak'] < 40000.0)
+    peakVal = np.median((magSort['diff'])[np.where(peakRange)])
+    # peakVal = np.median(diffCut)
+    print peakVal
+    
+    plt.scatter((magSort['diff'])[np.where(peakRange)], (magSort['mag'])[np.where(peakRange)], edgecolor='none', facecolor='blue', s=4)
     
     while nRemoved != 0:
         nBefore = diffCut.size
-        magSort = np.sort(magdiff, order='mag')
-        peakVal = np.median(magSort['diff'][250:500])
-        # peakVal = np.median(diffCut)
-        print peakVal
-        diffCheck = np.where(abs(peakVal-diffCut) < 2.5*diffCut.std())#[i for i,d in enumerate(diff) if (-0.5 < d < 0.0)]
-        # print diffCheck
+        diffCheck = np.where(abs(peakVal-diffCut) < 2.0*diffCut.std())#[i for i,d in enumerate(diff) if (-0.5 < d < 0.0)]
+
         # 
         diffCut = diffCut[diffCheck]
         nRemoved = nBefore - diffCut.size
@@ -132,6 +149,8 @@ def escut(image, pos_file, fwhm):
         idCut = idCut[diffCheck]
         fwhmCut = fwhmCut[diffCheck]
         print diffCut.size, nRemoved, np.median(diffCut), diffCut.std()
+        if 0.05 < diffCut.std() <0.06:
+           nRemoved=0 
         # plt.fill_betweenx(bin_centers, bin_meds+3.0*bin_stds, bin_meds-3.0*bin_stds, facecolor='red', edgecolor='none', alpha=0.4, label='2x RMS sigma clipping region')
         
     # with open('escutSTD_i.pos','w+') as f:
@@ -143,7 +162,7 @@ def escut(image, pos_file, fwhm):
     bin_width = (bin_edges[1] - bin_edges[0])
     bin_centers = bin_edges[1:] - bin_width/2
     # print bin_meds, bin_stds
-    
+
     bin_hw = 3.0*bin_stds
     left_edge = np.array(zip(peakVal-bin_hw, bin_centers))
     right_edge = np.flipud(np.array(zip(peakVal+bin_hw, bin_centers)))
@@ -177,11 +196,11 @@ def escut(image, pos_file, fwhm):
     #         print >> f, xpos[blah-1], ypos[blah-1]
             
     # fwhmcheck = np.loadtxt('testfwhmREG.log', usecols=(10,), unpack=True)
-    fwhmCut2 = fwhmCut[np.where(magCut < -4.0)]
-    print np.median(fwhmCut2), fwhmCut2.std()
-    fwchk = np.where(np.abs(fwhmCut-np.median(fwhmCut2)) > 10.0*fwhmCut2.std())
-    drop = np.abs(fwhmCut-np.median(fwhmCut2)) > 10.0*fwhmCut2.std()
-    # fwmag = mag2x[sources]
+    fwhmchk2 = np.where((magCut<-4) & (fwhmCut<90.0))
+    print np.median(fwhmCut[fwhmchk2]), np.std(fwhmCut[fwhmchk2])
+    fwchk = np.where(np.abs(fwhmCut-np.median(fwhmCut[fwhmchk2])) > 10.0*np.std(fwhmCut[fwhmchk2]))
+    drop = np.abs(fwhmCut-np.median(fwhmCut[fwhmchk2])) > 10.0*np.std(fwhmCut[fwhmchk2])
+
     
     with open('escutVBAD_i.pos','w+') as f:
         for i,blah in enumerate(xCut[fwchk]):
@@ -198,6 +217,7 @@ def escut(image, pos_file, fwhm):
                 print >> f, xCut[i], yCut[i]
     
     plt.fill_betweenx(bin_centers, peakVal+bin_hw, peakVal-bin_hw, facecolor='red', edgecolor='none', alpha=0.4, label='2x RMS sigma clipping region')
+
     plt.scatter(diffCut[fwchk], magCut[fwchk], edgecolor='none', facecolor='red', s=4)
     plt.ylim(0,-12)
     plt.xlabel('$m_{2x} - m_{1x}$')

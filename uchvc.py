@@ -6,10 +6,12 @@ from matplotlib.path import Path
 # import matplotlib.pyplot as plt
 from subprocess import call
 # from astropy import wcs
-import sewpy
+# import sewpy
 from astropy.io import fits
 from pyraf import iraf
 from escut_new import escut 
+from rand_bkg import bkg_boxes
+from uchvc_cal import js_calibrate, download_sdss
 
 home_root = os.environ['HOME']
 funpack_path = home_root+'/bin/funpack'
@@ -38,8 +40,10 @@ for file_ in os.listdir("./"):
         fits_file_i = file_
     if file_.endswith("g.fits"):
         fits_file_g = file_
-    if file_.endswith("g.fits.fz"):    # get the title string from the zipped g image 
-        title_string = file_[0:9]        # which should always exist in the directory
+
+path = os.getcwd()
+steps = path.split('/')
+title_string = steps[-1].upper()        # which should always exist in the directory
         
 # copy the good region (no cell gaps) to a new file        
 fits_g = title_string+'_g_sh.fits'
@@ -97,39 +101,43 @@ fits_h_g = fits.open(fits_g)
 # fwhm_g = fits_h_g[0].header['F_AVGSEE']/0.11
 
 # get steven's/QR's estimate of the image FWHMPSF
-fwhm_i = fits_h_i[0].header['FWHMPSF']
-fwhm_g = fits_h_g[0].header['FWHMPSF']
+try:
+    fwhm_i = fits_h_i[0].header['FWHMPSF']
+    fwhm_g = fits_h_g[0].header['FWHMPSF']
+except:
+    fwhm_i = fits_h_i[0].header['SEEING']/0.11
+    fwhm_g = fits_h_g[0].header['SEEING']/0.11
 
 print 'Target Coordinates :: ',fits_h_i[0].header['RA'],fits_h_i[0].header['DEC']
 print 'Image header FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i)
 
 # background sigma calculation
 # put down boxes to measure it. QR should give a reasonable estimate as well, maybe use that? (simpler)
-if not os.path.isfile('background_regions.txt') :
-    print 'To continue you must select 12 to 15 empty rectangular regions in'
-    print 'DS9 and export to an IRAF PROS file named background_regions.txt'
-    raw_input("Press Enter when finished:")
+# if not os.path.isfile('background_regions.txt') :
+#     print 'To continue you must select 12 to 15 empty rectangular regions in'
+#     print 'DS9 and export to an IRAF PROS file named background_regions.txt'
+#     raw_input("Press Enter when finished:")
 # 
 # 
-if not os.path.isfile('bgvals_i.txt'):
-    bg_file_g = open("bgvals_g.txt", 'w+')
-    bg_file_i = open("bgvals_i.txt", 'w+')
-
-    b3,b4,b5,b6 = np.loadtxt('background_regions.txt',usecols=(2,3,4,5),unpack=True)
-    for i in range(len(b3)) :
-        bx1 = b3[i] - (b5[i]/2.)
-        bx2 = b3[i] + (b5[i]/2.)
-        by1 = b4[i] - (b6[i]/2.)
-        by2 = b4[i] + (b6[i]/2.)
-        
-        iraf.images.imstat(fits_g+'['+repr(int(bx1))+':'+repr(int(bx2))+','+repr(int(by1))+':'+repr(int(by2))+']', fields="image,npix,mean,midpt,stddev,min,max", Stdout=bg_file_g)
-        iraf.images.imstat(fits_i+'['+repr(int(bx1))+':'+repr(int(bx2))+','+repr(int(by1))+':'+repr(int(by2))+']', fields="image,npix,mean,midpt,stddev,min,max", Stdout=bg_file_i)
-        
-    bg_file_g.close()
-    bg_file_i.close()
-    
-bgmean_g, bgsig_g = np.loadtxt('bgvals_g.txt',usecols=(3,4),unpack=True)
-bgmean_i, bgsig_i = np.loadtxt('bgvals_i.txt',usecols=(3,4),unpack=True)
+# if not os.path.isfile('bgvals_i.txt'):
+#     bg_file_g = open("bgvals_g.txt", 'w+')
+#     bg_file_i = open("bgvals_i.txt", 'w+')
+# 
+#     b3,b4,b5,b6 = np.loadtxt('background_regions.txt',usecols=(2,3,4,5),unpack=True)
+#     for i in range(len(b3)) :
+#         bx1 = b3[i] - (b5[i]/2.)
+#         bx2 = b3[i] + (b5[i]/2.)
+#         by1 = b4[i] - (b6[i]/2.)
+#         by2 = b4[i] + (b6[i]/2.)
+#         
+#         iraf.images.imstat(fits_g+'['+repr(int(bx1))+':'+repr(int(bx2))+','+repr(int(by1))+':'+repr(int(by2))+']', fields="image,npix,mean,midpt,stddev,min,max", Stdout=bg_file_g)
+#         iraf.images.imstat(fits_i+'['+repr(int(bx1))+':'+repr(int(bx2))+','+repr(int(by1))+':'+repr(int(by2))+']', fields="image,npix,mean,midpt,stddev,min,max", Stdout=bg_file_i)
+#         
+#     bg_file_g.close()
+#     bg_file_i.close()
+#     
+# bgmean_g, bgsig_g = np.loadtxt('bgvals_g.txt',usecols=(3,4),unpack=True)
+# bgmean_i, bgsig_i = np.loadtxt('bgvals_i.txt',usecols=(3,4),unpack=True)
 
 # yes, use the QR measured background values (get them from the image headers!) 
 # bg_i = fits_h_i[0].header['SKY_STD']
@@ -137,10 +145,13 @@ bgmean_i, bgsig_i = np.loadtxt('bgvals_i.txt',usecols=(3,4),unpack=True)
 # bgm_i = fits_h_i[0].header['SKY_MEDI']
 # bgm_g = fits_h_g[0].header['SKY_MEDI']
 
-bg_g = np.mean(bgsig_g)
-bg_i = np.mean(bgsig_i)
-bgm_g = np.mean(bgmean_g)
-bgm_i = np.mean(bgmean_i)
+bgm_g, bg_g, cen = bkg_boxes(fits_g, 1000, 20.0, sources=True)
+bgm_i, bg_i, cen = bkg_boxes(fits_i, 1000, 10.0, sources=True)
+
+# bg_g = np.mean(bgsig_g)
+# bg_i = np.mean(bgsig_i)
+# bgm_g = np.mean(bgmean_g)
+# bgm_i = np.mean(bgmean_i)
 print 'Image mean BG sigma value :: g = {0:5.3f} : i = {1:5.3f}'.format(bg_g,bg_i)
 print 'Image mean BG median value :: g = {0:5.3f} : i = {1:5.3f}'.format(bgm_g,bgm_i)
 
@@ -151,7 +162,7 @@ if not os.path.isfile(fits_g+'.coo.1') :
     iraf.datapars.setParam('fwhmpsf',fwhm_g,check=1)
     iraf.datapars.setParam('sigma',bg_g,check=1)
     
-    iraf.findpars.setParam('threshold',3.0)
+    iraf.findpars.setParam('threshold',4.0)
     iraf.apphot.daofind(image=fits_g, verbose="no", verify='no')
 #     
 #     # i image
@@ -159,7 +170,7 @@ if not os.path.isfile(fits_i+'.coo.1') :
     iraf.datapars.setParam('fwhmpsf',fwhm_i,check=1)
     iraf.datapars.setParam('sigma',bg_i,check=1)
     
-    iraf.findpars.setParam('threshold',3.0)
+    iraf.findpars.setParam('threshold',4.0)
     iraf.apphot.daofind(image=fits_i, verbose="no", verify='no')
 
 #         # now pull out all the sources with 4x background -- let sextractor measure that for us
@@ -305,7 +316,7 @@ iraf.digiphot.mkobsfile.setParam('allfilters','yes')
 if not os.path.isfile('ifirst_tol7.out') :
     iraf.digiphot.mkobsfile.setParam('observations','ifirst_tol7.out')
     iraf.digiphot.mkobsfile.setParam('tolerance',7.) # number of pixels away matched source can be, DATA DEPENDENT!
-    iraf.digiphot.mkobsfile()
+    iraf.digiphot.mkobsfile(mode='h')
 
 # if not os.path.isfile('ifirst_tol8.out') :
 #     iraf.mkobsfile.setParam('observations','ifirst_tol8.out')
@@ -364,8 +375,10 @@ if not os.path.isfile('apcor.tbl.txt'):
     ap_cand1_g = [(ap_gx[i],ap_gy[i],float(ap_fwhm_g[i]),float(ap_peak_g[i]),float(ap_mag_g[i])) for i in range(len(ap_gx)) if (ap_peak_g[i] != 'INDEF' and ap_fwhm_g[i] != 'INDEF' and ap_mag_g[i] != 'INDEF')]
     ap_cand1_i = [(ap_ix[i],ap_iy[i],float(ap_fwhm_i[i]),float(ap_peak_i[i]),float(ap_mag_i[i])) for i in range(len(ap_ix)) if (ap_peak_i[i] != 'INDEF' and ap_fwhm_i[i] != 'INDEF' and ap_mag_i[i] != 'INDEF')]
     
-    if fwhm_i < 10.0 :
+    # print ap_cand1_g
+    if fwhm_g < 10.0 and fwhm_i < 10.0 :
         ap_cand_g = [ap_cand1_g[i] for i in range(len(ap_cand1_g)) if (20000. < ap_cand1_g[i][3] < 50000.)]
+        print ap_cand_g
         ap_cand_i = [ap_cand1_i[i] for i in range(len(ap_cand1_i)) if (20000. < ap_cand1_i[i][3] < 50000.)]
         # print ap_cand_g
         ap_avg_g1 = np.mean([ap_cand_g[i][2] for i in range(len(ap_cand_g))])
@@ -377,11 +390,11 @@ if not os.path.isfile('apcor.tbl.txt'):
         ap_stars_g = [ap_cand_g[i] for i in range(len(ap_cand_g)) if ((ap_avg_g1-ap_std_g1) < ap_cand_g[i][2] < (ap_avg_g1+ap_std_g1))]
         ap_stars_i = [ap_cand_i[i] for i in range(len(ap_cand_i)) if ((ap_avg_i1-ap_std_i1) < ap_cand_i[i][2] < (ap_avg_i1+ap_std_i1))]
         # print len(ap_stars_g), len(ap_stars_i)
-        ap_avg_g = np.mean([ap_stars_g[i][2] for i in range(len(ap_stars_g))])
-        ap_avg_i = np.mean([ap_stars_i[i][2] for i in range(len(ap_stars_i))])
+        ap_avg_g = np.mean([ap_cand_g[i][2] for i in range(len(ap_cand_g))])
+        ap_avg_i = np.mean([ap_cand_i[i][2] for i in range(len(ap_cand_i))])
     
-        ap_std_g = np.std([ap_stars_g[i][2] for i in range(len(ap_stars_g))])
-        ap_std_i = np.std([ap_stars_i[i][2] for i in range(len(ap_stars_i))])
+        ap_std_g = np.std([ap_cand_g[i][2] for i in range(len(ap_cand_g))])
+        ap_std_i = np.std([ap_cand_i[i][2] for i in range(len(ap_cand_i))])
         print 'Measured image FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(ap_avg_g,ap_avg_i)
     
         if not os.path.isfile('apcor_stars_g.txt'):
@@ -494,6 +507,7 @@ else :
     ap_fwhm_g = np.loadtxt('getfwhm_g.log',usecols=(12,),dtype=str,unpack=True)
     good = np.where(ap_fwhm_g!='INDEF')
     fwhm_good = ap_fwhm_g[good].astype(float)
+    print good
     ap_avg_g = np.median(fwhm_good)
 
     ap_ix,ap_iy = np.loadtxt('getfwhm_i.log',usecols=(0,1),unpack=True)
@@ -511,7 +525,8 @@ else :
 #     print 'Something went wrong running escut. Try running it outside of this script.'
 
 # escut_g = escut(fits_g, 'tol7_g.pos', ap_fwhm_g)
-escut_i = escut(fits_i, 'tol7_i.pos', ap_fwhm_i)
+# print ap_peak_i.size, ap_fwhm_i.size
+escut_i = escut(fits_i, 'tol7_i.pos', ap_fwhm_i, ap_peak_i)
     
 # finally rephot just the good stuff to get a good number
 if os.path.isfile('escut_g.pos') :
@@ -651,12 +666,43 @@ nid,gx,gy,g_i,g_ierr,ix,iy,i_i,i_ierr = np.loadtxt('calibration.dat',usecols=(0,
 # i = eps_gi * (g-i) + ZP_i
 g0 = g_i - (kg*amg) + apcor_g 
 i0 = i_i - (ki*ami) + apcor_i
-gmi = mu_gi*(g0-i0) + zp_gi
 
-i_mag = i0 + eps_gi*gmi + zp_i #- cal_A_i 
-g_mag = gmi + i_mag - cal_A_g 
+download_sdss(fits_g, fits_i, gmaglim = 21)
+eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = fits_g, img2 = fits_i)
+
+# use the instrumental magnitude and initial color guess to ITERATE 
+# until you reach a converged calibrated magnitude/color
+tolerance = 0.0001
+g_mag = []
+i_mag = []
+for j,mag in enumerate(g0):
+    g_0 = g0[j]
+    i_0 = i0[j]
+    color_guess = 0.0
+    color_diff = 1.0
+    while abs(color_diff) > tolerance:
+        g_cal = g_0 + eps_g*color_guess + zp_g
+        i_cal = i_0 + eps_i*color_guess + zp_i
+        
+        color_new = g_cal - i_cal
+        color_diff = color_guess-color_new
+        color_guess = color_new
+        # print j, g_cal, i_cal, color_new
+    g_mag.append(g_cal)
+    i_mag.append(i_cal)
+
+g_mag = np.array(g_mag)
+i_mag = np.array(i_mag)
+g_mag = g_mag - cal_A_g 
 i_mag = i_mag - cal_A_i
 gmi = g_mag - i_mag
+# 
+# gmi = mu_gi*(g0-i0) + zp_gi
+# 
+# i_mag = i0 + eps_gi*gmi + zp_i #- cal_A_i 
+# g_mag = gmi + i_mag - cal_A_g 
+# i_mag = i_mag - cal_A_i
+# gmi = g_mag - i_mag
 
 print 'Median (g-i) :: g - i = {0:7.4f}'.format(np.median(gmi))
 print 'Final number of phot-ed stars :: g = {0:5d} : i = {1:5d}'.format(len(g_mag),len(i_mag))
@@ -672,7 +718,7 @@ for i in range(len(ix)) :
 f3.close()
 
 plt.clf()
-plt.scatter(gmi, i_mag,  color='black', marker='o', edgecolors='none')
+plt.scatter(gmi, i_mag, s=2, color='black', marker='o', edgecolors='none')
 plt.ylabel('$i$')
 plt.xlabel('$(g-i)$')
 plt.ylim(25,15)

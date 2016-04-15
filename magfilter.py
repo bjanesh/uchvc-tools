@@ -249,7 +249,7 @@ def main(argv):
 		
 		segm = detect_sources(S, S_th, npixels=5)
 		props = source_properties(S, segm)
-		columns = ['id', 'xcentroid', 'ycentroid', 'max_value', 'maxval_pos', 'area']
+		columns = ['id', 'xcentroid', 'ycentroid', 'max_value', 'maxval_xpos', 'maxval_ypos', 'area', 'equivalent_radius']
 		tbl = properties_table(props, columns=columns)
 		print tbl
 		
@@ -387,6 +387,9 @@ def main(argv):
 		circ_c_x = (yedges[y_cent]/60.)+ra_c
 		circ_c_y = (xedges[x_cent]/60.)+dec_c
 		circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
+		ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
+		ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=True)
+		print 'Peak RA:',ra_c_d,':: Peak Dec:',dec_c_d
 		
 		hi_c_ra, hi_c_dec = 142.5104167, 16.6355556
 		hi_c_x, hi_c_y = abs((hi_c_ra-ra_c)*60), abs((hi_c_dec-dec_c)*60)

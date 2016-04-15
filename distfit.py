@@ -11,7 +11,7 @@ def distfit(n,dists,title):
 	fwhm = 2.0
 	sig = ((bins/width)*fwhm)/2.355
 	valsLP = []
-	for i in range(25000) :
+	for i in range(5000) :
 		random_ra = 20.0*np.random.random_sample((n,))
 		random_dec = 20.0*np.random.random_sample((n,))
 		random_xy = zip(random_ra,random_dec)
