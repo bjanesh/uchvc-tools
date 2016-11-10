@@ -1,4 +1,4 @@
-def distfit(n,dists,title):
+def distfit(n,dists,title,ra,dec,fwhm, dm):
 	import numpy as np
 	import matplotlib.pyplot as plt
 	# from scipy.optimize import curve_fit
@@ -8,12 +8,12 @@ def distfit(n,dists,title):
 	# n = 279
 	bins = 165
 	width = 22 
-	fwhm = 2.0
+	# fwhm = 2.0
 	sig = ((bins/width)*fwhm)/2.355
 	valsLP = []
-	for i in range(5000) :
-		random_ra = 20.0*np.random.random_sample((n,))
-		random_dec = 20.0*np.random.random_sample((n,))
+	for i in range(25000) :
+		random_ra = ra*np.random.random_sample((n,))
+		random_dec = dec*np.random.random_sample((n,))
 		random_xy = zip(random_ra,random_dec)
 		grid_r, xedges_r, yedges_r = np.histogram2d(random_dec, random_ra, bins=[bins,bins], range=[[0,width],[0,width]])
 		hist_points_r = zip(xedges_r,yedges_r)
@@ -67,4 +67,4 @@ def distfit(n,dists,title):
 	plt.legend(loc='best', frameon=True)
 	ax.set_aspect(3)
 	# plt.show()
-	plt.savefig(title+'dist.pdf')
+	plt.savefig(title+'_'+repr(dm)+'_'+repr(fwhm)+'_dist.pdf')

@@ -1,0 +1,48 @@
+# Usage:
+# awk -f calc_mean_sky_bkgd imstat.out
+#
+BEGIN{
+#
+# *********NOTE - THIS LINE TO BE EDITED EACH TIME!
+# SET THIS TO THE NUMBER OF BLANK REGIONS THAT WILL BE USED FOR THE MIDPT
+# CALCULATION
+    num = 14
+#
+# Initialize variables
+    mean_midpt = 0.
+    totmidpt = 0.
+    stddev = 0.
+    sum = 0.
+    count = 0
+}
+{ 
+if (($2 == "IMAGE")||(NF = 0)) {next}
+
+if ($1 ~ "AGC"){
+#if ($1 ~ "_gcs"){
+    count = count + 1
+#    midpt[count] = $4
+# uncomment this line and comment out the above one if calculating the
+# mean stddev of the sky instead of the mean midpt
+    midpt[count] = $5
+    totmidpt = totmidpt + midpt[count]
+}
+
+if (count == num) {
+   mean_midpt = totmidpt / count
+   for (j = 1; j <= num; j++){
+     sum = sum + ((midpt[j] - mean_midpt)**2.)
+   }
+   stddev = sqrt(sum / (num - 1))
+
+printf("Last region= %s, Count= %i, Mean midpt= %6.1f, S_x= %4.1f\n", $1, count, mean_midpt, stddev)
+
+# Re-initialize variables
+    mean_midpt = 0.
+    totmidpt = 0.
+    stddev = 0.
+    sum = 0.
+    count = 0
+
+}
+}   

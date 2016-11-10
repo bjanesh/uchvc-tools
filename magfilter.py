@@ -12,7 +12,6 @@ from pyraf import iraf
 import scipy.stats as ss
 from photutils import detect_sources, source_properties, properties_table
 from photutils.utils import random_cmap
-
 try :
 	from scipy import ndimage
 except ImportError :
@@ -48,7 +47,7 @@ def main(argv):
 		elif opt in ("--filter"):
 			filt = arg
 			if arg == 'old' :
-				filter_file = home_root+'/uchvc/filter.txt'
+				filter_file = home_root+'/projects/uchvc-tools/filter.txt'
 				filter_string = 'old'
 			else: 
 				filter_file = home_root+'/uchvc/iso_filter.txt'
@@ -78,6 +77,7 @@ def main(argv):
 	mag_file = 'calibrated_mags.dat'
 	mark_file = 'f_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.dat'
 	circ_file = 'c_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.dat'
+	fcirc_file = 'fc_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.dat'
 		
 
 	# read in magnitudes, colors, and positions(x,y)
@@ -128,8 +128,8 @@ def main(argv):
 	# The second argument is "origin" -- in this case we're declaring we
 	# have 1-based (Fortran-like) coordinates.
 	world = w.all_pix2world(pixcrd, 1)
-	ra_c, dec_c = w.all_pix2world(0,0,1)
-	ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=True)
+	ra_corner, dec_corner = w.all_pix2world(0,0,1)
+	ra_c_d,dec_c_d = deg2HMS(ra=ra_corner, dec=dec_corner, round=True)
 	print 'Corner RA:',ra_c_d,':: Corner Dec:',dec_c_d
 	
 	fwhm_i = fits_i[0].header['FWHMPSF']
@@ -141,8 +141,8 @@ def main(argv):
 	fits_g.close()
 	
 	# split the ra and dec out into individual arrays and transform to arcmin from the corner
-	i_ra = [abs((world[i,0]-ra_c)*60) for i in range(len(world[:,0]))]
-	i_dec = [abs((world[i,1]-dec_c)*60) for i in range(len(world[:,1]))]
+	i_ra = [abs((world[i,0]-ra_corner)*60) for i in range(len(world[:,0]))]
+	i_dec = [abs((world[i,1]-dec_corner)*60) for i in range(len(world[:,1]))]
 	# also preserve the decimal degrees for reference
 	i_rad = [world[i,0] for i in range(len(world[:,0]))]
 	i_decd = [world[i,1] for i in range(len(world[:,1]))]
@@ -239,7 +239,7 @@ def main(argv):
 		# print "Convolving for m-M =",dm
 		grid_gaus = ndimage.filters.gaussian_filter(grid, sig, mode='constant', cval=0)
 		S = np.array(grid_gaus*0)
-		S_th = 2.0
+		S_th = 3.0
 		
 		# print grid_gaus[0:44][0:44]
 		
@@ -247,13 +247,16 @@ def main(argv):
 		grid_sigma = np.std(grid_gaus)
 		S = (grid_gaus-grid_mean)/grid_sigma
 		
-		segm = detect_sources(S, S_th, npixels=5)
+		above_th = [(int(i),int(j)) for i in range(len(S)) for j in range(len(S[i])) if (S[i][j] >= S_th)]
+		
+		segm = detect_sources(S, 2.0, npixels=5)
 		props = source_properties(S, segm)
-		columns = ['id', 'xcentroid', 'ycentroid', 'max_value', 'maxval_xpos', 'maxval_ypos', 'area', 'equivalent_radius']
+		columns = ['id', 'maxval_xpos', 'maxval_ypos', 'max_value', 'area']
 		tbl = properties_table(props, columns=columns)
 		print tbl
-		
-		above_th = [(int(i),int(j)) for i in range(len(S)) for j in range(len(S[i])) if (S[i][j] >= S_th)]
+		rand_cmap = random_cmap(segm.max + 1, random_state=12345)
+
+
 		
 		# for i in range(143) :
 		# 	for j in range(143) :
@@ -271,13 +274,15 @@ def main(argv):
 		# print 'Value of S at above:','{0:6.3f}'.format(S[x_cent][y_cent])
 		
 		x_cent_S, y_cent_S = np.unravel_index(S.argmax(),S.shape)
-		print 'Max of S located at:','('+'{0:6.3f}'.format(yedges[y_cent_S])+','+'{0:6.3f}'.format(xedges[x_cent_S])+')'
+		print 'Max of S located at:','('+'{0:6.3f}'.format(y_cent_S)+','+'{0:6.3f}'.format(x_cent_S)+')'
 		# print grid_gaus[x_cent][y_cent]
 		print 'Value of S at above:','{0:6.3f}'.format(S[x_cent_S][y_cent_S])
 		
 		print 'Number of bins above S_th: {0:4d}'.format(len(above_th))
 		
-		distfit.distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string)
+		# for value in tbl['max_value']:
+		# 	distfit.distfit(n_in_filter,value,title_string,max(i_ra),max(i_dec),fwhm, dm)
+			# distfit.distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,max(i_ra),max(i_dec),fwhm, dm)
 		# sig_values_r = list()
 		# for i in range(1000) :
 		# 	random_ra = max(i_ra)*np.random.random_sample((n_in_filter,))
@@ -312,8 +317,8 @@ def main(argv):
 		# make a circle to highlight a certain region
 		cosd = lambda x : np.cos(np.deg2rad(x))
 		sind = lambda x : np.sin(np.deg2rad(x))
-		x_circ = [yedges[y_cent] + pltsig*cosd(t) for t in range(0,359,1)]
-		y_circ = [xedges[x_cent] + pltsig*sind(t) for t in range(0,359,1)]
+		x_circ = [yedges[y_cent] + 2.0*pltsig*cosd(t) for t in range(0,359,1)]
+		y_circ = [xedges[x_cent] + 2.0*pltsig*sind(t) for t in range(0,359,1)]
 		
 		verts_circ = zip(x_circ,y_circ)
 		circ_filter = Path(verts_circ)
@@ -333,8 +338,8 @@ def main(argv):
 		
 		rCentx = 16.0*np.random.random()+2.0
 		rCenty = 16.0*np.random.random()+2.0
-		x_circr = [rCentx + pltsig*cosd(t) for t in range(0,359,1)]
-		y_circr = [rCenty + pltsig*sind(t) for t in range(0,359,1)]
+		x_circr = [rCentx + 2.0*pltsig*cosd(t) for t in range(0,359,1)]
+		y_circr = [rCenty + 2.0*pltsig*sind(t) for t in range(0,359,1)]
 		
 		verts_circr = zip(x_circr,y_circr)
 		rcirc_filter = Path(verts_circr)
@@ -367,6 +372,11 @@ def main(argv):
 		i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
 		i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
 		
+		with open(fcirc_file,'w+') as f3:
+			for i,x in enumerate(i_x_fc):
+				print >> f3, i_x_fc[i], i_y_fc[i]
+		
+		
 		i_mag_fcr = [i_mag[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
 		i_ierr_fcr = [i_ierr[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
 		g_ierr_fcr = [g_ierr[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
@@ -384,8 +394,8 @@ def main(argv):
 		# for i in range(len(i_x_fc)) :
 		# 	print (i_x_fc[i],i_y_fc[i])
 		
-		circ_c_x = (yedges[y_cent]/60.)+ra_c
-		circ_c_y = (xedges[x_cent]/60.)+dec_c
+		circ_c_x = (yedges[y_cent]/60.)+ra_corner
+		circ_c_y = (xedges[x_cent]/60.)+dec_corner
 		circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
 		ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
 		ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=True)
@@ -401,7 +411,13 @@ def main(argv):
 		
 		center_file = 'im_cens_'+dm_string+'_'+fwhm_string+'.dat'
 		im_cens = open(center_file,'w+')
-		print >> im_cens, -circ_pix_x, circ_pix_y, 'circle_center'
+		for k,xp in enumerate(tbl):
+			circ_c_x = (yedges[tbl['maxval_xpos'][k]]/60.)+ra_corner
+			circ_c_y = (xedges[tbl['maxval_ypos'][k]]/60.)+dec_corner
+			circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
+			# ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
+			print circ_c_x, circ_c_y
+			print >> im_cens, -circ_pix_x, circ_pix_y, 'circle_center'+repr(k)
 		print >> im_cens, hi_pix_x, hi_pix_y, 'HI_centroid'
 		im_cens.close()
 		
@@ -437,7 +453,8 @@ def main(argv):
 		plt.plot(x_circr,y_circr,linestyle='-', color='gold')
 		plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
 		# plt.scatter(i_ra_c, i_dec_c,  color='red', marker='o', s=3, edgecolors='none')
-		plt.scatter(i_ra_f, i_dec_f,  color='red', marker='o', s=5, edgecolors='none')
+		plt.scatter(i_ra_f, i_dec_f,  c=gmi_f, marker='o', s=(30-np.array(i_mag_f)), edgecolors='none', cmap=cm.rainbow)
+		plt.colorbar()
 		plt.ylabel('Dec (arcmin)')
 		plt.xlim(0,max(i_ra))
 		plt.ylim(0,max(i_dec))
@@ -468,8 +485,8 @@ def main(argv):
 	
 		extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
 		plt.imshow(S, extent=extent, interpolation='nearest',cmap=cm.gray)
+		plt.imshow(segm, extent=extent, cmap=rand_cmap, alpha=0.5)
 		cbar_S = plt.colorbar()
-		plt.imshow(segm, extent=extent, cmap=random_cmap(segm.max+1), alpha=0.5)
 		# cbar_S.tick_params(labelsize=10)
 		plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
 		plt.plot(x_circr,y_circr,linestyle='-', color='gold')

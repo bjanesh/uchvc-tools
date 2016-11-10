@@ -1,0 +1,54 @@
+# Usage:
+# awk -f make_aper_corr_table b.aper_corr.mag.1 > b.aper_corr_table
+#
+BEGIN{printf("# ID    xcen     ycen      1xfwhm   1.5x     2x     2.5x     3x     3.5x     4x     4.5x     5x     5.5x     6x \n")
+}
+{
+if ($1 ~ "#") { next }
+# for some reason the first line is always one space too far to the left
+# and I can't seem to fix this! 
+if ($1 ~ "AGC198606") { printf("%2i  %8.3f  %8.3f  ", $4, $2, $3) }
+#
+# use these for the b image
+#if ($1 == "8.00") { printf("%7s ", $5) }
+#if ($1 == "12.00") { printf("%7s ", $5) }
+#if ($1 == "16.00" ) { printf("%7s ", $5) }
+#if ($1 == "20.00") { printf("%7s ", $5) }
+#if ($1 == "24.00") { printf("%7s ", $5) }
+#if ($1 == "28.00") { printf("%7s ", $5) }
+#if ($1 == "32.00") { printf("%7s ", $5) }
+#if ($1 == "36.00") { printf("%7s ", $5) }
+#if ($1 == "40.00") { printf("%7s ", $5) }
+#if ($1 == "44.00") { printf("%7s ", $5) }
+#if ($1 == "48.00") { printf("%7s  \n ", $5) }
+#
+# use these for the v image 6,9,12,15,18,21,24,27,30,33,36
+if ($1 == "6.00") { printf("%7s ", $5) }
+if ($1 == "9.00") { printf("%7s ", $5) }
+if ($1 == "12.00") { printf("%7s ", $5) }
+if ($1 == "15.00") { printf("%7s ", $5) }
+if ($1 == "18.00") { printf("%7s ", $5) }
+if ($1 == "21.00") { printf("%7s ", $5) }
+if ($1 == "24.00") { printf("%7s ", $5) }
+if ($1 == "27.00") { printf("%7s ", $5) }
+if ($1 == "30.00") { printf("%7s ", $5) }
+if ($1 == "33.00") { printf("%7s ", $5) }
+if ($1 == "36.00") { printf("%7s  \n", $5) }
+#
+# use these for the r image
+#if ($1 == "6.00") { printf("%7s ", $5) }
+#if ($1 == "9.00") { printf("%7s ", $5) }
+#if ($1 == "13.00" ) { printf("%7s ", $5) }
+#if ($1 == "16.00") { printf("%7s ", $5) }
+#if ($1 == "19.00") { printf("%7s ", $5) }
+#if ($1 == "22.00") { printf("%7s ", $5) }
+#if ($1 == "25.00") { printf("%7s ", $5) }
+#if ($1 == "28.00") { printf("%7s ", $5) }
+#if ($1 == "32.00") { printf("%7s ", $5) }
+#if ($1 == "35.00") { printf("%7s ", $5) }
+#if ($1 == "38.00") { printf("%7s  \n ", $5) }
+#
+
+
+}
+

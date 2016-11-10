@@ -20,10 +20,10 @@ def main(argv):
     width = 22 
     home_root = os.environ['HOME']
     imexam_flag = False
-    fwhm = 2.0        # in arcmin (7.5 pixels = 1 arcmin)
+    fwhm = 3.0        # in arcmin (7.5 pixels = 1 arcmin)
     disp_flag = False
 
-    filter_file = home_root+'/uchvc/filter.txt'
+    filter_file = home_root+'/projects/uchvc-tools/filter.txt'
     filter_string = 'old'
 
     
@@ -121,7 +121,7 @@ def main(argv):
     
     with open(out_file, 'w+') as f1:
         print >> f1, '# dm mpc x_cent y_cent ra_cent dec_cent S(x,y) N %'
-        for dm in tqdm(np.arange(21.0,27.5,0.01)):
+        for dm in tqdm(np.arange(25.75,26.75,0.01)):
             mpc = pow(10,((dm + 5.)/5.))/1000000.
             # print '================================================================================'
             # print 'DM = {0:6.3f}, dist (Mpc) = {1:6.3f}'.format(dm, mpc)
@@ -220,7 +220,7 @@ def main(argv):
             # print 'Number of bins above S_th: {0:4d}'.format(len(above_th))
         
             sig_values_r = list()
-            for i in range(100) :
+            for i in range(1000) :
                 random_ra = max(i_ra)*np.random.random_sample((n_in_filter,))
                 random_dec = max(i_dec)*np.random.random_sample((n_in_filter,))
                 random_xy = zip(random_ra,random_dec)
@@ -238,7 +238,7 @@ def main(argv):
                 sig_values_r.append(S_r[x_cent_r][y_cent_r])
         
             pct_calc = [sig_values_r[i] for i in range(len(sig_values_r)) if (sig_values_r[i] < S[x_cent][y_cent])]
-            percentile = (float(len(pct_calc))/100.0)*100.0
+            percentile = (float(len(pct_calc))/1000.0)*100.0
         
             # print '================================================================================'
             # print 'Significance values:'
@@ -254,7 +254,7 @@ def main(argv):
             circ_c_y = (xedges[x_cent]/60.)+dec_c
             circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
             # print circ_pix_x, circ_pix_y
-            print >> f1, '{0:9.5f} {1:9.5f} {2:6.3f} {3:6.3f} {4:6.3f} {5:6.3f} {6:6.3f} {7:6.3f} {8:6.3f} {9:4d} {10:3d}'.format(float(-circ_pix_x), float(circ_pix_y), dm, mpc, yedges[y_cent_S], xedges[x_cent_S], circ_c_x, circ_c_y, S[x_cent_S][y_cent_S], n_in_filter, int(percentile))
+            print >> f1, '{0:9.5f} {1:9.5f} {2:6.3f} {3:6.3f} {4:6.3f} {5:6.3f} {6:6.3f} {7:6.3f} {8:6.3f} {9:4d} {10:5.1f}'.format(float(-circ_pix_x), float(circ_pix_y), dm, mpc, yedges[y_cent_S], xedges[x_cent_S], circ_c_x, circ_c_y, S[x_cent_S][y_cent_S], n_in_filter, percentile)
     
 def deg2HMS(ra='', dec='', round=False):
   RA, DEC, rs, ds = '', '', '', ''

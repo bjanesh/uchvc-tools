@@ -1,0 +1,163 @@
+# Usage:
+# awk -f calc_calib_mags calibration.dat
+#
+BEGIN{
+#
+# Define all the photometric coefficients, aperture corrections, etc.
+# Aperture corrections
+# From aperture correction calculation on 06/04/2014
+apg = -0.39265
+apr = 0.0
+api = -0.323955 
+#apg = 0.0
+#apr = 0.0
+#api = 0.0
+#
+# Zero points and color terms
+# FILL THESE IN AND WRITE HERE HOW/WHEN THESE WERE DERIVED
+#
+# from steven's webpage! need to be redone in future anyway
+#zp_g = 26.097
+#zp_i = 25.456
+zp_g = 26.350
+eps_gi = 0.0
+zp_i = 25.850
+#eps_bv = 0.02983937
+#zp_v = 26.097
+#mu_bv = 1.04903952
+#zp_bv = -0.17797
+#mu_vr = 1.03762057
+#zp_vr = -0.15330
+# Bootstrap offsets - use if needed
+#g_offset = 0.
+#r_offset = 0.
+#i_offset = 0.
+# Extinction coefficients
+kg = 0.20
+kr = 0.17
+ki = 0.07
+#kg = 0.
+#kr = 0.
+#ki = 0.
+# Galactic extinction corrections 
+# from Schlegel et al. 98
+#A_g = 0.534
+#A_r = 0.388
+#A_i = 0.294
+# http://irsa.ipac.caltech.edu/applications/DUST/ from S&F(2011)
+A_g = 0.115
+A_r = 0.080
+A_i = 0.059
+#
+gflag = 0
+rflag = 0
+iflag = 0
+}
+{
+# If there are header lines, print them
+if ($1 ~ "#") {
+print $0
+next
+}
+
+# Read in the airmasses, instrumental mags, errors
+id = $1
+gx = $2
+gy = $3
+amg = $4
+gi = $5
+egi = $6
+rx = $7
+ry = $8
+amr = $9
+ri = $10
+eri = $11
+ix = $12
+iy = $13
+ami = $14
+ii = $15
+eii = $16
+
+# for testing
+#if (id == 2401) print gi, ri, ii
+
+# dealing with INDEF mags
+if (gi == "INDEF"){
+  gflag = 1
+}
+if (ri == "INDEF"){
+  rflag = 1
+}
+if (ii == "INDEF"){
+  iflag = 1
+}
+  
+# Apply the aperture correction
+# NOTE that apcorr's would normally make magnitude smaller (brighter)
+gi = gi + apg
+ri = ri + apr
+ii = ii + api
+
+# Apply the extinction correction 
+# steven says that this step is rolled into the zero point FOR THIS KIND OF STACKING 
+# so don't do this step right now
+g0 = gi #- (kg*amg)
+r0 = ri #- (kr*amr)
+i0 = ii #- (ki*ami)
+
+# NOTE - Here I am bootstrapping the mags from one night to another - use if needed
+#g0 = g0 + g_offset
+#r0 = r0 + r_offset
+#i0 = i0 + i_offset
+
+# Calculate calibrated magnitudes
+#BmV = mu_bv*(b0-v0) + zp_bv
+#V = v0 + eps_bv*(BmV) + zp_v
+#VmR = mu_vr*(v0-r0) + zp_vr
+#g = g0 + eps_gi*(g0-i0) + zp_g
+g = g0 + zp_g
+r = r0 + zp_r
+i = i0 + zp_i
+
+#B = BmV + V
+#R = V - VmR
+
+# Apply a Galactic extinction correction
+
+g = g - A_g
+r = r - A_r
+i = i - A_i
+gmi = g - i
+rmi = r - i
+gmr = g - r
+
+#B = B - A_B
+#V = V - A_V
+#R = R - A_R
+#BmV = B - V
+#VmR = V - R
+
+# dealing with INDEF mags
+if (gflag == 1){
+  gi = "INDEF"
+  g = "-99.999"
+  gmi = "-9.999"
+  gmr = "-9.999"
+  gflag = 0
+}
+if (rflag == 1){
+  ri = "INDEF"
+  r = "-99.999"
+  gmr = "-9.999"
+  rflag = 0
+}
+if (iflag == 1){
+  ii = "INDEF"
+  gmi = "-9.999"
+  iflag = 0
+}
+  
+
+# Print the results
+printf("%-12s  %8.2f %8.2f %5.3f %8.4f %5.3f %8.2f %8.2f %5.3f %8.4f %5.3f %8.2f %8.2f %5.3f %8.4f %5.3f %7.3f %6.3f %6.3f\n",id,gx,gy,amg,gi,egi,rx,ry,amr,ri,eri,ix,iy,ami,ii,eii,g, gmi, gmr)
+}

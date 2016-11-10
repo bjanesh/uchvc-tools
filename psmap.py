@@ -143,21 +143,13 @@ def main(argv):
 	# print grid_gaus[x_cent][y_cent]
 	print 'Value of S at above:','{0:6.3f}'.format(S[x_cent][y_cent])
 
-	ind = np.argpartition(S.flatten(), -50)[-50:]
-	print ind, S.argmax()
-	
 	x_cent_S, y_cent_S = np.unravel_index(S.argmax(),S.shape)
 	print 'Max of S located at:','('+'{0:6.3f}'.format(yedges[y_cent_S])+','+'{0:6.3f}'.format(xedges[x_cent_S])+')'
+	# print grid_gaus[x_cent][y_cent]
 	print 'Value of S at above:','{0:6.3f}'.format(S[x_cent_S][y_cent_S])
-
-	for i in ind:
-		x_cent_S, y_cent_S = np.unravel_index(i,S.shape)
-		print 'Max of S located at:','('+'{0:6.3f}'.format(yedges[y_cent_S])+','+'{0:6.3f}'.format(xedges[x_cent_S])+')'
-		print 'Value of S at above:','{0:6.3f}'.format(S[x_cent_S][y_cent_S])
 
 	print 'Number of bins above S_th: {0:4d}'.format(len(above_th))
 
-	h_diag, hd_xedges, hd_yedges = np.histogram2d(i_mag, gmi, bins=[60,60], range=[[15, 25],[-1, 4]])
 	
 	# make a circle to highlight a certain region
 	cosd = lambda x : np.cos(np.deg2rad(x))
@@ -187,17 +179,6 @@ def main(argv):
 	# print "{0:3d} stars in filter, {1:3d} stars in circle, {2:3d} stars in both.".format(len(i_mag_f),len(i_mag_c),len(i_mag_fc))
 	# for i in range(len(i_x_fc)) :
 	# 	print (i_x_fc[i],i_y_fc[i])
-	
-	g_tlm, i_tlm = np.loadtxt('trilegal.dat', usecols=(12,14), unpack=True)
-	gmi_tlm = g_tlm-i_tlm
-	hd_tlm, tlm_xedges, tlm_yedges = np.histogram2d(i_tlm, gmi_tlm, bins=[60,60], range=[[15, 25],[-1, 4]], normed=True)
-	print hd_tlm.max()
-
-	hd_ratio = h_diag.astype(float)-np.array(i_mag).size*hd_tlm.astype(float)
-	hd_ratio[hd_ratio<0] = 0
-	# hd_ratio[np.isnan(hd_ratio)] = 0.0
-	# hd_ratio[np.isinf(hd_ratio)] = h_diag[np.isinf(hd_ratio)]
-	print hd_ratio.max()
 
 	circ_c_x = (yedges[y_cent]/60.)+ra_c
 	circ_c_y = (xedges[x_cent]/60.)+dec_c
@@ -240,10 +221,11 @@ def main(argv):
 	# plot
 	# print "Plotting for m-M = ",dm
 	ax0 = plt.subplot(2,2,1)
-	plt.scatter(i_ra, i_dec,  color='black', marker='o', s=1, edgecolors='none')
+	plt.scatter(i_ra, i_dec,  color=gmi, marker='o', s=(27-np.array(i_mag)), edgecolors='none', cmap=cm.rainbow)
 	plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
 	plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
-	plt.scatter(i_ra_c, i_dec_c,  color='red', marker='o', s=3, edgecolors='none')
+	plt.colorbar()
+	# plt.scatter(i_ra_c, i_dec_c,  color='red', marker='o', s=3, edgecolors='none')
 	plt.ylabel('Dec (arcmin)')
 	plt.xlim(0,max(i_ra))
 	plt.ylim(0,max(i_dec))
@@ -251,9 +233,6 @@ def main(argv):
 	ax0.set_aspect('equal')
 
 	ax1 = plt.subplot(2,2,2)
-	# extent = [hd_yedges[0], hd_yedges[-1], hd_xedges[-1], hd_xedges[0]]
-	# plt.imshow(hd_ratio, extent=extent, interpolation='nearest', cmap=cm.spectral)
-	# cbar_hd = plt.colorbar()
 	plt.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
 	plt.scatter(gmi_c, i_mag_c,  color='red', marker='o', s=3, edgecolors='none')
 	plt.tick_params(axis='y',left='on',right='off',labelleft='on',labelright='off')
@@ -266,7 +245,7 @@ def main(argv):
 	ax2 = plt.subplot(2,2,3)
 
 	extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
-	plt.imshow(S, extent=extent, interpolation='nearest', cmap=cm.spectral)
+	plt.imshow(S, extent=extent, interpolation='nearest', cmap=cm.cubehelix)
 	cbar_S = plt.colorbar()
 	# cbar_S.tick_params(labelsize=10)
 	plt.plot(x_circ,y_circ,linestyle='-', color='magenta')

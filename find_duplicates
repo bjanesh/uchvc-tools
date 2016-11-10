@@ -1,0 +1,21 @@
+# Usage:
+# awk -f find_duplicates gc_cand_calib.after_cut.sorted_by_imag
+#
+{
+if ($1 ~ "#") next
+else {  i = i + 1
+	id[i] = $1
+	imag[i] = $15
+	ix[i] = $12
+	iy[i] = $13
+
+# for testing
+#if (id[i] == 25) {print ix[i],ix[i-1]}
+
+	if (i > 1) {
+	if ((imag[i]==imag[i-1])&&(ix[i]==ix[i-1])&&(iy[i]==iy[i-1])) {
+		print id[i],id[i-1]
+	}
+	}
+}
+}

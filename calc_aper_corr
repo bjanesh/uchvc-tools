@@ -1,0 +1,31 @@
+#
+# Usage:  awk -f calc_aper_corr r.aper_corr_table
+#
+BEGIN{ count = 0 }
+{
+if ($1 == "#") { next } 
+#
+#use 3x<fwhm>
+#print $1, $8, $8 - $4
+#use 4.5x<fwhm>
+print $1, $11, $11 - $4
+count = count + 1
+#use 3x<fwhm>
+#apcorr[count] = $8 - $4
+#use 4x<fwhm>
+apcorr[count] = $11 - $4
+sum = sum + apcorr[count]
+#}
+}
+END{ 
+print count
+avg_apcorr = sum / count 
+for (i = 1; i <= count; i++){
+stddev = stddev + (apcorr[i] - avg_apcorr)**2.
+}
+stddev = 1/(count - 1)*stddev
+stddev = sqrt(stddev)
+sem = stddev / (sqrt(count))
+print avg_apcorr, stddev, sem
+}
+

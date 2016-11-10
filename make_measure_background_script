@@ -1,0 +1,26 @@
+# Usage:
+# awk -f make_measure_background_script background_regions.txt > measure_background.cl
+#
+#
+#
+BEGIN{
+#print "#"
+print "unlearn imstat"
+}
+{
+if ($1 ~ "logical"){
+
+	x1 = $3 - ($5/2.)
+	x2 = $3 + ($5/2.)
+
+	y1 = $4 - ($6/2.)
+	y2 = $4 + ($6/2.)
+
+}
+
+printf("imstat AGC198606_*_sh.fits[%i:%i,%i:%i] fields=\"image,npix,mean,midpt,stddev,min,max\"\n",x1,x2,y1,y2)
+#printf("imstat n7332_*.fits[%i:%i,%i:%i] fields=\"image,npix,mean,midpt,stddev,min,max\"\n",x1,x2,y1,y2)
+}
+#END{
+#print "#"
+#}

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 # import matplotlib.pyplot as plt
 from subprocess import call
-# from astropy import wcs
+from astropy import wcs
 # import sewpy
 from astropy.io import fits
 from pyraf import iraf
@@ -162,16 +162,16 @@ if not os.path.isfile(fits_g+'.coo.1') :
     iraf.datapars.setParam('fwhmpsf',fwhm_g,check=1)
     iraf.datapars.setParam('sigma',bg_g,check=1)
     
-    iraf.findpars.setParam('threshold',4.0)
-    iraf.apphot.daofind(image=fits_g, verbose="no", verify='no')
+    iraf.findpars.setParam('threshold',3.5)
+    iraf.apphot.daofind(image=fits_g, verbose="no", verify="no")
 #     
 #     # i image
 if not os.path.isfile(fits_i+'.coo.1') :
     iraf.datapars.setParam('fwhmpsf',fwhm_i,check=1)
     iraf.datapars.setParam('sigma',bg_i,check=1)
     
-    iraf.findpars.setParam('threshold',4.0)
-    iraf.apphot.daofind(image=fits_i, verbose="no", verify='no')
+    iraf.findpars.setParam('threshold',3.5)
+    iraf.apphot.daofind(image=fits_i, verbose="no", verify="no")
 
 #         # now pull out all the sources with 4x background -- let sextractor measure that for us
 # gdetect = sewpy.SEW(
@@ -351,7 +351,7 @@ if not os.path.isfile('getfwhm_g.log') :
     iraf.getfwhm.setParam('outfile','getfwhm_g.log')
     iraf.getfwhm.setParam('center','no')
     iraf.imexamine.setParam('frame',1)
-    iraf.getfwhm()
+    iraf.getfwhm(mode='h')
 
 if not os.path.isfile('getfwhm_i.log') :
     iraf.getfwhm.setParam('images',fits_i)
@@ -359,7 +359,7 @@ if not os.path.isfile('getfwhm_i.log') :
     iraf.getfwhm.setParam('outfile','getfwhm_i.log')
     iraf.getfwhm.setParam('center','no')
     iraf.imexamine.setParam('frame',2)
-    iraf.getfwhm()
+    iraf.getfwhm(mode='h')
     
 # determine the aperture correction needed--this is actually an extremely important step. uses 4.5x the measured FWHM as the aperture DATA DEPENDENT 
 if not os.path.isfile('apcor.tbl.txt'):
@@ -377,7 +377,7 @@ if not os.path.isfile('apcor.tbl.txt'):
     
     # print ap_cand1_g
     if fwhm_g < 10.0 and fwhm_i < 10.0 :
-        ap_cand_g = [ap_cand1_g[i] for i in range(len(ap_cand1_g)) if (20000. < ap_cand1_g[i][3] < 50000.)]
+        ap_cand_g = [ap_cand1_g[i] for i in range(len(ap_cand1_g)) if (10000. < ap_cand1_g[i][3] < 50000.)]
         print ap_cand_g
         ap_cand_i = [ap_cand1_i[i] for i in range(len(ap_cand1_i)) if (20000. < ap_cand1_i[i][3] < 50000.)]
         # print ap_cand_g
@@ -646,7 +646,7 @@ txdump_out.close()
 
 call('sort -g phot_sources.txdump > temp', shell=True)
 call('mv temp phot_sources.txdump', shell=True)
-call('awk -f ~/uchvc/tools/make_calibdat phot_sources.txdump > calibration.dat', shell=True)
+call('awk -f ~/projects/uchvc-tools/make_calibdat phot_sources.txdump > calibration.dat', shell=True)
 
 nid,gx,gy,g_i,g_ierr,ix,iy,i_i,i_ierr = np.loadtxt('calibration.dat',usecols=(0,1,2,4,5,11,12,14,15),unpack=True)
 
@@ -667,7 +667,7 @@ nid,gx,gy,g_i,g_ierr,ix,iy,i_i,i_ierr = np.loadtxt('calibration.dat',usecols=(0,
 g0 = g_i - (kg*amg) + apcor_g 
 i0 = i_i - (ki*ami) + apcor_i
 
-download_sdss(fits_g, fits_i, gmaglim = 21)
+download_sdss(fits_g, fits_i, gmaglim = 22.0)
 eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = fits_g, img2 = fits_i)
 
 # use the instrumental magnitude and initial color guess to ITERATE 
@@ -712,16 +712,26 @@ i_mag_lims = [i_mag[i] for i in range(len(i_mag)) if (i_ierr[i] >= 0.2)]
 
 # print '5-sigma limit :: g = {0:7.4f} : i = {1:7.4f}'.format(min(g_mag_lims), min(i_mag_lims))
 
+# add the ra and dec to the catalog too
+pixcrd = zip(ix,iy)
+# Parse the WCS keywords in the primary HDU
+w = wcs.WCS(fits_h_i[0].header)
+
+# Convert pixel coordinates to world coordinates
+# The second argument is "origin" -- in this case we're declaring we
+# have 1-based (Fortran-like) coordinates.
+world = w.all_pix2world(pixcrd, 1)
+
 f3 = open('calibrated_mags.dat', 'w+')
 for i in range(len(ix)) :
-    print >> f3, '{0:8.2f} {1:8.2f} {2:12.3f} {3:12.3f} {4:8.2f} {5:8.2f} {6:12.3f} {7:12.3f} {8:12.3f} '.format(gx[i],gy[i],g_mag[i],g_ierr[i],ix[i],iy[i],i_mag[i],i_ierr[i],gmi[i])
+    print >> f3, '{0:8.2f} {1:8.2f} {2:12.3f} {3:12.3f} {4:8.2f} {5:8.2f} {6:12.3f} {7:12.3f} {8:12.3f} {9:12.8f} {10:12.8f}'.format(gx[i],gy[i],g_mag[i],g_ierr[i],ix[i],iy[i],i_mag[i],i_ierr[i],gmi[i], world[i,0],world[i,1])
 f3.close()
 
 plt.clf()
 plt.scatter(gmi, i_mag, s=2, color='black', marker='o', edgecolors='none')
 plt.ylabel('$i$')
 plt.xlabel('$(g-i)$')
-plt.ylim(25,15)
+plt.ylim(27,15)
 plt.xlim(-1,4)
 plt.savefig(title_string+"_CMD.pdf")
 

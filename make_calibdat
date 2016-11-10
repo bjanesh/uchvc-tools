@@ -1,0 +1,134 @@
+# Usage:
+#  awk -f make_calibdat phot_sources.txdump > sources_calib.dat
+#
+#============================================================================ 
+#
+BEGIN{
+# The variable "count" equals the number of filters that have been read 
+# for each star
+count = 0
+
+#printf("#name/id         gx       gy    am_g    g_i   err   rx       ry     am_r    r_i   err    ix      iy      am_i    i_i   err      g    g-r   r-i\n")
+# Use this one if you only have g and i
+printf("#name/id           gx         gy   am_g     g_i   err     rx       ry     am_r    r_i   err     ix      iy    am_i     i_i   err      g    g-i   g-r\n")
+printf("#--------------------------------------------------------------------------------------------------------------------------------------------------------\n")
+
+#printf("#name/id         gx       gy    am_g    g_i   err   ix       iy     am_i    i_i   err    g    g-i\n")
+#printf("#----------------------------------------------------------------------------------------------------------------------------------------------\n")
+}
+{
+if ($1 ~ "#") next
+
+# Read in star name and Landolt mag and colors
+id = $1
+#name = $12
+#lg = $13
+#lgmi = $14
+#lvmr = $15
+#airmass = $10
+
+# COMMENT THESE LINES OUT IF THE R FILTER IS ONE OF THE SET - PUT THIS HERE
+#  B/C LACI ONLY HAS G AND I PHOTOMETRY AND I DIDN'T WANT THOSE
+#  COLUMNS TO BE BLANK 
+  rxcen = 0.00
+  rycen = 0.00
+  am_r = 0.00
+  ri = "INDEF"
+  eri = "INDEF"
+
+if ($9 ~ "odi_g") { 
+  gxcen = $7
+  gycen = $8
+  am_g = $10
+  gi = $2
+  egi = $3
+  count = count + 1 
+} else if ($9 ~ "odi_r") { 
+  rxcen = $7
+  rycen = $8
+  am_r = $10
+  ri = $2
+  eri = $3
+  count = count + 1
+} else if ($9 ~ "odi_i") { 
+  ixcen = $7
+  iycen = $8
+  am_i = $10
+  ii = $2
+  eii = $3
+  count = count + 1
+} else if ($9 ~ "g-SLOAN") { 
+  gxcen = $7
+  gycen = $8
+  am_g = $10
+  gi = $2
+  egi = $3
+  count = count + 1 
+} else if ($9 ~ "r-SLOAN") { 
+  rxcen = $7
+  rycen = $8
+  am_r = $10
+  ri = $2
+  eri = $3
+  count = count + 1
+} else if ($9 ~ "i-SLOAN") { 
+  ixcen = $7
+  iycen = $8
+  am_i = $10
+  ii = $2
+  eii = $3
+  count = count + 1
+}
+
+# dealing with INDEF mags
+
+if (gi == "INDEF"){
+  gflag = 1
+}
+if (ri == "INDEF"){
+  rflag = 1
+}
+if (ii == "INDEF"){
+  iflag = 1
+}
+
+if (egi == "INDEF"){
+  gflag = 1
+}
+if (eri == "INDEF"){
+  rflag = 1
+}
+if (eii == "INDEF"){
+  iflag = 1
+}
+
+if (gflag == 1){
+  gi = "-99.999"
+  egi = "-99.999"
+  gflag = 0
+}
+if (rflag == 1){
+  ri = "-99.999"
+  eri = "-99.999"
+  rflag = 0
+}
+if (iflag == 1){
+  ii = "-99.999"
+  eii = "-99.999"
+  iflag = 0
+}
+
+# Change this depending on how many filters you have
+if (count == 2) {
+
+#printf("%2s  %5.3f  %7.3f  %5.3f  %5.3f  %7.3f  %5.3f  %5.3f  %7.3f  %5.3f  %7.3f  %5.3f  %5.3f\n",id,am_b,bi,ebi,am_v,vi,evi,am_r,ri,eri,lv,lbmv,lvmr)
+# The instrumental mags are printed as strings here, in order to preserve
+# INDEF values from phot
+#
+# Use this print statement for Landolts (which have names)
+#printf("%2s/%-12s %7.2f %7.2f %5.3f %7s %5s %7.2f %7.2f %5.3f %7s %5s %7.2f %7.2f %5.3f %7s %5s %7.3f %6.3f %6.3f\n",id,name,gxcen,gycen,am_g,gi,egi,rxcen,rycen,am_r,ri,eri,ixcen,iycen,am_i,ii,eii,lg,lrmi,lgmi)
+# Use this print statement for GC candidates (no names, just numbers)
+printf("%-15s %8.2f %8.2f %5.3f %7s %5s %8.2f %8.2f %5.3f %7s %5s %8.2f %8.2f %5.3f %7s %5s %7.3f %5.3f %5.3f\n",id,gxcen,gycen,am_g,gi,egi,rxcen,rycen,am_r,ri,eri,ixcen,iycen,am_i,ii,eii,lg,lgmi,lgmr)
+count = 0
+}
+}
