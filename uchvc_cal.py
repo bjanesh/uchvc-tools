@@ -1069,7 +1069,7 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     # hdulist1.close()
     # hdulist2.close()
     
-    return eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i
+    return eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i, gXAIRMASS, iXAIRMASS
 
 if __name__ == '__main__':
     # ask user input on which files to run on

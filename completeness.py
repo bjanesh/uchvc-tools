@@ -1,9 +1,11 @@
+#!/usr/bin/env python
+
 import os
 import numpy as np
 from pyraf import iraf
 import glob
 #######################
-filter = 'i'   ######## change me!
+filter_ = 'g'   ######## change me!
 #######################
 
 iraf.ptools(_doprint=0)
@@ -49,7 +51,7 @@ for file_ in glob.glob('*.art'):
 for file_ in glob.glob('*.pselect'):
 	print 'creating artificial star table from', file_
 	iraf.tables.tcreate.setParam("nlines",0)
-	iraf.tables.tcreate("art_star_list."+filter+"."+file_[-12:-8]+".tab", "art_table.description", file_)
+	iraf.tables.tcreate("art_star_list."+filter_+"."+file_[-12:-8]+".tab", "art_table.description", file_)
 	
 for file_ in glob.glob('*.mag.1a'):
 	print 'reformatting', file_
@@ -66,7 +68,7 @@ for file_ in glob.glob('*.mag.1a'):
 	os.rename('temp1', file_)
 	print 'creating phot table from', file_
 	iraf.tables.tcreate.setParam("nlines",5)
-	iraf.tables.tcreate("phot_output."+filter+"."+file_[-11:-7]+".tab", "phot_table.description", file_)
+	iraf.tables.tcreate("phot_output."+filter_+"."+file_[-11:-7]+".tab", "phot_table.description", file_)
 	
 artFiles = glob.glob('art*.tab')
 photFiles = glob.glob('phot*.tab')
@@ -76,9 +78,9 @@ iraf.tables.tmatch.setParam('incol2',"ID, XINIT, YINIT, MAG, MERR, IFILTER")
 
 for i in range(len(artFiles)):
 	print 'matching',artFiles[i], '&', photFiles[i]
-	iraf.tables.tmatch(artFiles[i], photFiles[i], namedFiles[i][0:9]+'.'+filter+"."+artFiles[i][-8:-4]+"_tmatch", "xcen,ycen", "xinit,yinit", 6.)
-	iraf.tables.tdump.setParam('datafile',namedFiles[i][0:9]+'.'+filter+"."+artFiles[i][-8:-4]+"_tmatch.tdump")
-	iraf.tables.tdump(namedFiles[i][0:9]+'.'+filter+"."+artFiles[i][-8:-4]+"_tmatch")
+	iraf.tables.tmatch(artFiles[i], photFiles[i], namedFiles[i][0:9]+'.'+filter_+"."+artFiles[i][-8:-4]+"_tmatch", "xcen,ycen", "xinit,yinit", 6.)
+	iraf.tables.tdump.setParam('datafile',namedFiles[i][0:9]+'.'+filter_+"."+artFiles[i][-8:-4]+"_tmatch.tdump")
+	iraf.tables.tdump(namedFiles[i][0:9]+'.'+filter_+"."+artFiles[i][-8:-4]+"_tmatch")
 
 iraf.tables.tinfo.setParam('ttout',"no")
 
@@ -91,6 +93,6 @@ for i, file_ in enumerate(glob.glob('*tmatch.tab')):
 
 	iraf.tables.tinfo(file_)
 	matchk = iraf.tables.tinfo.getParam('nrows')
-	pct = 100.0*float(matchk)/float(artk)
-	print >> cTable, "  ",file_[12:16],"        ",pct
+	pct = float(matchk)/float(artk)
+	print >> cTable, " ",file_[12:16],"        ",pct
 cTable.close()

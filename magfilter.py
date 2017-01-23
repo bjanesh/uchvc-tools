@@ -76,8 +76,8 @@ def main(argv):
 	out_file = filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.pdf'
 	mag_file = 'calibrated_mags.dat'
 	mark_file = 'f_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.dat'
-	circ_file = 'c_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.dat'
-	fcirc_file = 'fc_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.dat'
+	circ_file = 'c_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+	fcirc_file = 'fc_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
 		
 
 	# read in magnitudes, colors, and positions(x,y)
@@ -147,16 +147,28 @@ def main(argv):
 	i_rad = [world[i,0] for i in range(len(world[:,0]))]
 	i_decd = [world[i,1] for i in range(len(world[:,1]))]
 	
-	i_magBright = [i_mag[i] for i in range(len(i_mag)) if (i_mag[i] < 18.0)]
-	g_magBright = [g_mag[i] for i in range(len(i_mag)) if (i_mag[i] < 18.0)]
-	ixBright = [ix[i] for i in range(len(i_mag)) if (i_mag[i] < 18.0)]
-	iyBright = [iy[i] for i in range(len(i_mag)) if (i_mag[i] < 18.0)]
-	i_radBright = [i_rad[i] for i in range(len(i_mag)) if (i_mag[i] < 18.0)]
-	i_decdBright = [i_decd[i] for i in range(len(i_mag)) if (i_mag[i] < 18.0)]
+	i_magBright = [i_mag[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+	g_magBright = [g_mag[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+	ixBright = [ix[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+	iyBright = [iy[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+	i_radBright = [i_rad[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+	i_decdBright = [i_decd[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
 	
-	f1 = open('brightStars18.txt', 'w+')
+	f1 = open('brightStars2275.reg', 'w+')
 	for i in range(len(i_magBright)) :
 		print >> f1, '{0:12.4f} {1:12.4f} {2:10.5f} {3:9.5f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(ixBright[i],iyBright[i], i_radBright[i], i_decdBright[i], g_magBright[i], i_magBright[i], g_magBright[i]-i_magBright[i])
+	f1.close()
+	
+	i_magRed = [i_mag[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+	g_magRed = [g_mag[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+	ixRed = [ix[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+	iyRed = [iy[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+	i_radRed = [i_rad[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+	i_decdRed = [i_decd[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+	
+	f1 = open('redStars175.reg', 'w+')
+	for i in range(len(i_magRed)) :
+		print >> f1, '{0:12.4f} {1:12.4f} {2:10.5f} {3:9.5f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(ixRed[i],iyRed[i], i_radRed[i], i_decdRed[i], g_magRed[i], i_magRed[i], g_magRed[i]-i_magRed[i])
 	f1.close()
 	
 	# the color-magnitude filter we're going to use in abs. mag. 
@@ -281,7 +293,7 @@ def main(argv):
 		print 'Number of bins above S_th: {0:4d}'.format(len(above_th))
 		
 		# for value in tbl['max_value']:
-		# 	distfit.distfit(n_in_filter,value,title_string,max(i_ra),max(i_dec),fwhm, dm)
+#             distfit.distfit(n_in_filter,value,title_string,max(i_ra),max(i_dec),fwhm, dm)
 			# distfit.distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,max(i_ra),max(i_dec),fwhm, dm)
 		# sig_values_r = list()
 		# for i in range(1000) :
@@ -317,8 +329,8 @@ def main(argv):
 		# make a circle to highlight a certain region
 		cosd = lambda x : np.cos(np.deg2rad(x))
 		sind = lambda x : np.sin(np.deg2rad(x))
-		x_circ = [yedges[y_cent] + 2.0*pltsig*cosd(t) for t in range(0,359,1)]
-		y_circ = [xedges[x_cent] + 2.0*pltsig*sind(t) for t in range(0,359,1)]
+		x_circ = [yedges[y_cent] + 1.5*cosd(t) for t in range(0,359,1)]
+		y_circ = [xedges[x_cent] + 1.5*sind(t) for t in range(0,359,1)]
 		
 		verts_circ = zip(x_circ,y_circ)
 		circ_filter = Path(verts_circ)
@@ -338,8 +350,8 @@ def main(argv):
 		
 		rCentx = 16.0*np.random.random()+2.0
 		rCenty = 16.0*np.random.random()+2.0
-		x_circr = [rCentx + 2.0*pltsig*cosd(t) for t in range(0,359,1)]
-		y_circr = [rCenty + 2.0*pltsig*sind(t) for t in range(0,359,1)]
+		x_circr = [rCentx + 1.5*cosd(t) for t in range(0,359,1)]
+		y_circr = [rCenty + 1.5*sind(t) for t in range(0,359,1)]
 		
 		verts_circr = zip(x_circr,y_circr)
 		rcirc_filter = Path(verts_circr)
@@ -376,6 +388,24 @@ def main(argv):
 			for i,x in enumerate(i_x_fc):
 				print >> f3, i_x_fc[i], i_y_fc[i]
 		
+		print 'max i mag in circle = ', min(i_mag_fc)
+		
+		rs = np.array([45, 55, 65, 75, 85, 90])
+		for r in rs:	
+			x_circ = [yedges[y_cent] + r/60.*cosd(t) for t in range(0,359,1)]
+			y_circ = [xedges[x_cent] + r/60.*sind(t) for t in range(0,359,1)]
+
+			verts_circ = zip(x_circ,y_circ)
+			circ_filter = Path(verts_circ)
+
+			stars_circ = circ_filter.contains_points(xy_points)
+			i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+			i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+		
+			fcirc_file = 'circle'+repr(r)+'.txt'
+			with open(fcirc_file,'w+') as f3:
+				for i,x in enumerate(i_x_fc):
+					print >> f3, i_x_fc[i], i_y_fc[i]
 		
 		i_mag_fcr = [i_mag[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
 		i_ierr_fcr = [i_ierr[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
@@ -394,11 +424,11 @@ def main(argv):
 		# for i in range(len(i_x_fc)) :
 		# 	print (i_x_fc[i],i_y_fc[i])
 		
-		circ_c_x = (yedges[y_cent]/60.)+ra_corner
+		circ_c_x = ra_corner-(yedges[y_cent]/60.)
 		circ_c_y = (xedges[x_cent]/60.)+dec_corner
 		circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
 		ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
-		ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=True)
+		ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=False)
 		print 'Peak RA:',ra_c_d,':: Peak Dec:',dec_c_d
 		
 		hi_c_ra, hi_c_dec = 142.5104167, 16.6355556
@@ -422,7 +452,12 @@ def main(argv):
 		im_cens.close()
 		
 		mark_radius = int(pltsig*60/0.11)
+		ann_inn = int(np.ceil(pltsig*60/0.11/100.0))*100
+		ann_out = int(np.ceil(pltsig*60/0.11/100.0))*100+100
 		mark_radii = str(repr(mark_radius-2)+','+repr(mark_radius-1)+','+repr(mark_radius)+','+repr(mark_radius+1)+','+repr(mark_radius+2))
+		anni_radii = str(repr(ann_inn-2)+','+repr(ann_inn-1)+','+repr(ann_inn)+','+repr(ann_inn+1)+','+repr(ann_inn+2))
+		anno_radii = str(repr(ann_out-2)+','+repr(ann_out-1)+','+repr(ann_out)+','+repr(ann_out+1)+','+repr(ann_out+2))
+		print mark_radius, ann_inn, ann_out
 		
 		if disp_flag :
 			from pyraf import iraf
@@ -435,8 +470,12 @@ def main(argv):
 			iraf.tv.display(image=fits_file_i, frame=1)
 			iraf.tv.tvmark(frame=1, coords=mark_file, radii="14,15,16", color=207)
 			iraf.tv.tvmark(frame=1, coords=circ_file, radii="20,21,22", color=209)
+			iraf.tv.tvmark(frame=1, coords='brightStars22.reg', radii="26,27,28", color=205)
+			iraf.tv.tvmark(frame=1, coords='redStars175.reg', radii="32,33,34", color=204)
 			iraf.tv.tvmark(frame=1, coords=center_file, txsize=4, mark="plus", color=208, label="yes")
 			iraf.tv.tvmark(frame=1, coords=center_file, radii=mark_radii, color=208)
+			iraf.tv.tvmark(frame=1, coords=center_file, radii=anni_radii, color=208)
+			iraf.tv.tvmark(frame=1, coords=center_file, radii=anno_radii, color=208)
 			# iraf.tv.tvmark(frame=2, coords=mark_file, radii="14,15,16", color=207, label="yes")
 			# iraf.tv.tvmark(frame=2, coords=circ_file, radii="20,21,22", color=209)
 			# iraf.tv.tvmark(frame=2, coords=center_file, txsize=4, mark="plus", color=208, label="yes")
@@ -474,11 +513,11 @@ def main(argv):
 		plt.errorbar(bxvals, bcenters, xerr=i_ierrAVG, yerr=gmi_errAVG, linestyle='None', color='black', capsize=0, ms=0)
 		plt.tick_params(axis='y',left='on',right='off',labelleft='on',labelright='off')
 		ax1.yaxis.set_label_position('left')
-	 	plt.ylabel('$i$')
-	 	plt.xlabel('$(g-i)$')
+	 	plt.ylabel('$i_0$')
+	 	plt.xlabel('$(g-i)_0$')
 		plt.ylim(25,15)
 		plt.xlim(-1,4)
-		plt.title('m-M = ' + repr(dm) + ' (' + '{0:5.3f}'.format(mpc) +  ' Mpc)')
+		plt.title('m-M = ' + repr(dm) + ' (' + '{0:4.2f}'.format(mpc) +  ' Mpc)')
 		ax1.set_aspect(0.5)
 	
 		ax2 = plt.subplot(2,2,3)
@@ -508,8 +547,8 @@ def main(argv):
 		plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='off')
 		ax0.yaxis.set_label_position('left')
 		plt.text(0,17,'in circle')
-		plt.xlabel('$(g-i)$')
-		plt.ylabel('$i$')
+		plt.xlabel('$(g-i)_0$')
+		plt.ylabel('$i_0$')
 		plt.ylim(25,15)
 		plt.xlim(-1,4)
 		# ax3.set_aspect(0.5)	
@@ -520,11 +559,11 @@ def main(argv):
 		plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='on')
 		plt.text(0,17,'in reference \ncircle')
 		ax0.yaxis.set_label_position('left')
-		plt.xlabel('$(g-i)$')
+		plt.xlabel('$(g-i)_0$')
 		plt.ylim(25,15)
 		plt.xlim(-1,4)
 		# ax3.set _aspect(0.5)
-	
+		plt.tight_layout()
 		# plt.suptitle(title_string+ ' -- ' + fwhm_string + ' arcmin smoothing')
 		plt.show
 	

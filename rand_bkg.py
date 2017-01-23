@@ -1,9 +1,11 @@
+#!/usr/bin/env python
+import os
 import numpy as np
 import matplotlib.pylab as plt
 from astropy.stats import sigma_clipped_stats
 from astropy.io import fits as pyfits
 from astropy.convolution import Gaussian2DKernel
-from photutils.detection import detect_sources
+from photutils import detect_sources
 import matplotlib.pyplot as plt
 from scipy.ndimage import binary_dilation
 def bkg_boxes(frame,nboxes,length,sources=False):
@@ -85,6 +87,18 @@ def bkg_boxes(frame,nboxes,length,sources=False):
 	
 	return med,std,centers
 
-# example of how to use function
-# frame= 'gcp-f1tm.g.sh.fits'
-# stats,med_std,std_std,centers,max_box = bkg_boxes(frame,500,200.0,sources=True)
+def main():
+	pass
+
+if __name__ == '__main__':
+	# example of how to use function
+	path = os.getcwd()
+	steps = path.split('/')
+	title_string = steps[-1].upper() # which should always exist in the directory
+	fits_g = title_string+'_g_sh.fits'
+	fits_i = title_string+'_i_sh.fits'
+	
+	bgm_g, bg_g, cen = bkg_boxes(fits_g, 1000, 20.0, sources=True)
+	bgm_i, bg_i, cen = bkg_boxes(fits_i, 1000, 10.0, sources=True)
+	print 'Image mean BG sigma value :: g = {0:5.3f} : i = {1:5.3f}'.format(bg_g,bg_i)
+	print 'Image mean BG median value :: g = {0:5.3f} : i = {1:5.3f}'.format(bgm_g,bgm_i)
