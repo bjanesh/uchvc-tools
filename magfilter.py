@@ -329,8 +329,8 @@ def main(argv):
 		# make a circle to highlight a certain region
 		cosd = lambda x : np.cos(np.deg2rad(x))
 		sind = lambda x : np.sin(np.deg2rad(x))
-		x_circ = [yedges[y_cent] + 1.5*cosd(t) for t in range(0,359,1)]
-		y_circ = [xedges[x_cent] + 1.5*sind(t) for t in range(0,359,1)]
+		x_circ = [yedges[y_cent] + 3.0*cosd(t) for t in range(0,359,1)]
+		y_circ = [xedges[x_cent] + 3.0*sind(t) for t in range(0,359,1)]
 		
 		verts_circ = zip(x_circ,y_circ)
 		circ_filter = Path(verts_circ)
@@ -350,8 +350,8 @@ def main(argv):
 		
 		rCentx = 16.0*np.random.random()+2.0
 		rCenty = 16.0*np.random.random()+2.0
-		x_circr = [rCentx + 1.5*cosd(t) for t in range(0,359,1)]
-		y_circr = [rCenty + 1.5*sind(t) for t in range(0,359,1)]
+		x_circr = [rCentx + 3.0*cosd(t) for t in range(0,359,1)]
+		y_circr = [rCenty + 3.0*sind(t) for t in range(0,359,1)]
 		
 		verts_circr = zip(x_circr,y_circr)
 		rcirc_filter = Path(verts_circr)
@@ -390,7 +390,7 @@ def main(argv):
 		
 		print 'max i mag in circle = ', min(i_mag_fc)
 		
-		rs = np.array([45, 55, 65, 75, 85, 90])
+		rs = np.array([45, 55, 65, 75, 85, 90,180])
 		for r in rs:	
 			x_circ = [yedges[y_cent] + r/60.*cosd(t) for t in range(0,359,1)]
 			y_circ = [xedges[x_cent] + r/60.*sind(t) for t in range(0,359,1)]
@@ -504,7 +504,7 @@ def main(argv):
 		
 		if os.path.isfile('i_gmi_compl.out'):
 			iCompl,gmiCompl = np.loadtxt('i_gmi_compl.out',usecols=(0,1),unpack=True)
-			plt.plot(gmiCompl,iCompl, linestyle='--', color='black')
+			plt.plot(gmiCompl,iCompl, linestyle='--', color='green')
 		
 		plt.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
 		plt.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
@@ -524,7 +524,7 @@ def main(argv):
 	
 		extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
 		plt.imshow(S, extent=extent, interpolation='nearest',cmap=cm.gray)
-		plt.imshow(segm, extent=extent, cmap=rand_cmap, alpha=0.5)
+		# plt.imshow(segm, extent=extent, cmap=rand_cmap, alpha=0.5)
 		cbar_S = plt.colorbar()
 		# cbar_S.tick_params(labelsize=10)
 		plt.plot(x_circ,y_circ,linestyle='-', color='magenta')

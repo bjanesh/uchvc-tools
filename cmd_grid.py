@@ -89,9 +89,9 @@ for x in range(5):
         plt.text(3.45, 17.,'$\delta$ = {0:6.3f}'.format(ycenters[y]), horizontalalignment='right', verticalalignment='center', fontsize=4)
         plt.text(3.45, 18.,'$N$ = {0:4d}'.format(int(bin_count[x,y])), horizontalalignment='right', verticalalignment='center', fontsize=4)
         if x==4 and y==2:
-            plt.ylabel('$i$')
+            plt.ylabel('$i_0$')
         if x==2 and y==0:    
-            plt.xlabel('$(g-i)$')
+            plt.xlabel('$(g-i)_0$')
         plt.ylim(27,15)
         plt.xlim(-1,3.75)
         ax.xaxis.set_ticks([0,1,2,3])

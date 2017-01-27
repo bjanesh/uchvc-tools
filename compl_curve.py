@@ -48,15 +48,26 @@ with open('i_results.out','w+') as f:
 g_i, complg = np.loadtxt('g_results.out', usecols=(0,1), unpack=True)
 i_i, compli = np.loadtxt('i_results.out', usecols=(0,1), unpack=True)
 
+g_ift, complgft = np.loadtxt('g_completeness.fit_results', usecols=(0,1), unpack=True)
+i_ift, complift = np.loadtxt('i_completeness.fit_results', usecols=(0,1), unpack=True)
+
 fg = interpolate.interp1d(g_i, complg, kind=3)
 fi = interpolate.interp1d(i_i, compli, kind=3)
+fgft = interpolate.interp1d(g_ift, complgft, kind=3)
+fift = interpolate.interp1d(i_ift, complift, kind=3)
 
-xnew = np.arange(-3.5,-0.1, 0.01)
+xnew = np.arange(-3.5,-0.6, 0.01)
 plt.clf()
 plt.scatter(g_i, complg, c='blue')
 plt.scatter(i_i, compli, c='red')
+plt.scatter(g_ift, complgft, c='cyan')
+plt.scatter(i_ift, complift, c='magenta')
 plt.plot(xnew, fg(xnew), 'b-')
 plt.plot(xnew, fi(xnew), 'r-')
+plt.plot(xnew, fgft(xnew), 'c-')
+plt.plot(xnew, fift(xnew), 'm-')
+plt.xlabel('inst. mag')
+plt.ylabel('%')
 plt.show()
 compg = fg(xnew)
 compi = fi(xnew)
@@ -125,7 +136,11 @@ for n,gmi in enumerate(gmi_a):
                 compg_interp = 0.0
             comp = compi_interp*compg_interp
             # print comp, compi_interp, compg_interp
-            if (comp > 0.49 and comp < .505):
+            if (gmi < 2.0 and comp > 0.493 and comp < .501):
+                c50[n]=comp
+                c50_i[n] = i_mag[k]
+                print '{:5.2f} {:5.2f} {:6.4f} {:6.4f} {:6.4f}'.format(c50_i[n], gmi, compi_interp, compg_interp, comp)
+            elif (gmi >= 2.0 and comp > 0.3 and comp < .501):
                 c50[n]=comp
                 c50_i[n] = i_mag[k]
                 print '{:5.2f} {:5.2f} {:6.4f} {:6.4f} {:6.4f}'.format(c50_i[n], gmi, compi_interp, compg_interp, comp)
