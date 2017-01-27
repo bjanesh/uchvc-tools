@@ -20,10 +20,15 @@ ki = 0.058
 g_offset = 0.0
 i_offset = 0.0
 #
+
+epsgi = -0.0102148
+zpi = 25.9233501
+mugi = 1.0821236 
+zpgi = 0.5868422
 download_sdss(fits_g, fits_i, gmaglim = 22.0)
 eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i, gairmass, iairmass = js_calibrate(img1 = fits_g, img2 = fits_i, verbose=False)
-gairmass = 1.082642
-iairmass = 1.208449
+# gairmass = 1.0435380
+# iairmass = 1.0370200
 
 # median g-i color for initial i magnitude calculation
 medgmi = 1.236
@@ -56,46 +61,75 @@ fi = interpolate.interp1d(i_i, compli, kind=3)
 fgft = interpolate.interp1d(g_ift, complgft, kind=3)
 fift = interpolate.interp1d(i_ift, complift, kind=3)
 
-xnew = np.arange(-3.5,-0.6, 0.01)
-plt.clf()
-plt.scatter(g_i, complg, c='blue')
-plt.scatter(i_i, compli, c='red')
-plt.scatter(g_ift, complgft, c='cyan')
-plt.scatter(i_ift, complift, c='magenta')
-plt.plot(xnew, fg(xnew), 'b-')
-plt.plot(xnew, fi(xnew), 'r-')
-plt.plot(xnew, fgft(xnew), 'c-')
-plt.plot(xnew, fift(xnew), 'm-')
-plt.xlabel('inst. mag')
-plt.ylabel('%')
-plt.show()
+xnew = np.arange(-4.0,-0.25, 0.01)
 compg = fg(xnew)
 compi = fi(xnew)
 
 # convert inst. mags to calibrated
 tolerance = 0.0001
-g_mag = []
-i_mag = []
+g_magjs = []
+i_magjs = []
 g_0 = xnew - kg*gairmass
 i_0 = xnew - ki*iairmass
+gmi_0 = mugi*(g_0-i_0) + zpgi
+i_cal = i_0 + epsgi*(gmi_0) + zpi
+g_cal = gmi_0 + i_cal
+
+g0 = g_i - kg*gairmass
+i0 = i_i - ki*iairmass
+gmi0 = mugi*(g0-i0) + zpgi
+i_mag = i0 + epsgi*(gmi0) + zpi
+g_mag = gmi0 + i_mag
+
 for j,mag in enumerate(g_0):
     color_guess = 0.0
     color_diff = 1.0
     while abs(color_diff) > tolerance:
-        g_cal = g_0[j] + eps_g*color_guess + zp_g
-        i_cal = i_0[j] + eps_i*color_guess + zp_i
-        
-        color_new = g_cal - i_cal
+        g_caljs = g_0[j] + eps_g*color_guess + zp_g
+        i_caljs = i_0[j] + eps_i*color_guess + zp_i
+        color_new = g_caljs - i_caljs
         color_diff = color_guess-color_new
         color_guess = color_new
         # print j, g_cal, i_cal, color_new
-    g_mag.append(g_cal)
-    i_mag.append(i_cal)
-    
-g_mag = np.array(g_mag)
-i_mag = np.array(i_mag)
-g0 = g_i - kg*gairmass 
-i0 = i_i - ki*iairmass
+    g_magjs.append(g_caljs)
+    i_magjs.append(i_caljs)
+g_magjs = np.array(g_magjs)
+i_magjs = np.array(i_magjs)
+
+gmagjs = []
+imagjs = []
+# g0 = g_i - kg*gairmass 
+# i0 = i_i - ki*iairmass 
+for j,mag in enumerate(g0):
+    color_guess = 0.0
+    color_diff = 1.0
+    while abs(color_diff) > tolerance:
+        gcaljs = g0[j] + eps_g*color_guess + zp_g
+        icaljs = i0[j] + eps_i*color_guess + zp_i
+        color_new = gcaljs - icaljs
+        color_diff = color_guess-color_new
+        color_guess = color_new
+        print j, gcaljs, icaljs, color_new
+    gmagjs.append(gcaljs)
+    imagjs.append(icaljs)
+
+gmagjs = np.array(gmagjs)
+imagjs = np.array(imagjs)
+
+# print g_magjs-g_cal, i_magjs-i_cal
+
+plt.clf()
+plt.scatter(g_mag, complg, c='blue')
+plt.scatter(i_mag, compli, c='red')
+plt.scatter(gmagjs, complg, c='cyan')
+plt.scatter(imagjs, compli, c='magenta')
+plt.plot(g_cal, fg(xnew), 'b-')
+plt.plot(i_cal, fi(xnew), 'r-')
+plt.plot(g_magjs, fg(xnew), 'c-')
+plt.plot(i_magjs, fi(xnew), 'm-')
+plt.xlabel('mag')
+plt.ylabel('%')
+plt.savefig('compl_curves.pdf')
 
 # for j in range(len(g_mag)):
 # print '{:6.3f} {:5.3f} {:6.3f} {:5.3f}'.format(g_mag[j], compg[j], i_mag[j], compi[j])
@@ -106,15 +140,18 @@ i0 = i_i - ki*iairmass
 # compi_interp = np.zeros_like(ibin)
 # compg_interp = np.zeros_like(ibin)
 #
-gmi_a = np.arange(-1.2,3.1,0.1)
+gmi_a = np.arange(-1.2,4.1,0.1)
 c50_i = np.zeros_like(gmi_a)
 c50 = np.zeros_like(gmi_a)
 for n,gmi in enumerate(gmi_a):
-    for k in range(len(i_mag)):
-        i0c = i_mag[k] - eps_i*gmi - zp_i
-        g0c = gmi + i0c
+    for k in range(len(i_cal)):
+        i0cjs = i_magjs[k] - eps_i*gmi - zp_i
+        g0cjs = gmi + i0cjs
+        i0c = i_cal[k] - epsgi*gmi - zpi
+        g0c = ((gmi - zpgi)/mugi) + i0c
         compi_interp = compi[k]
-        # print gmi, i0c, g0c
+        if k==0:
+            print '{:4.1f} {:7.4f} {:7.4f} {:7.4f} {:7.4f} {:7.4f} {:7.4f}'.format(gmi, i0c, g0c, g0c-i0c, i0cjs, g0cjs, g0cjs-i0cjs)# i0c-i0cjs, g0c-g0cjs)
 #     for k in range(len(ibin)):
 #         i0c = ibin[k] - eps_i*gmi - zp_i
 #         g0c = gmi + i0c
@@ -136,19 +173,8 @@ for n,gmi in enumerate(gmi_a):
                 compg_interp = 0.0
             comp = compi_interp*compg_interp
             # print comp, compi_interp, compg_interp
-            if (gmi < 2.0 and comp > 0.493 and comp < .501):
+            if (comp > 0.495 and comp <= .50):
                 c50[n]=comp
-                c50_i[n] = i_mag[k]
-                print '{:5.2f} {:5.2f} {:6.4f} {:6.4f} {:6.4f}'.format(c50_i[n], gmi, compi_interp, compg_interp, comp)
-            elif (gmi >= 2.0 and comp > 0.3 and comp < .501):
-                c50[n]=comp
-                c50_i[n] = i_mag[k]
-                print '{:5.2f} {:5.2f} {:6.4f} {:6.4f} {:6.4f}'.format(c50_i[n], gmi, compi_interp, compg_interp, comp)
+                c50_i[n] = i_cal[k]
+                # print '{:5.2f} {:5.2f} {:6.4f} {:6.4f} {:6.4f}'.format(c50_i[n], gmi, compi_interp, compg_interp, comp)
  
-
-# plt.clf()
-# plt.scatter(i_mag, compi)
-# plt.plot(ibin, compi_interp)
-# plt.scatter(g_mag, compg)
-# plt.plot(ibin, compg_interp)
-# plt.show()

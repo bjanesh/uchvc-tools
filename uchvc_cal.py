@@ -1092,4 +1092,4 @@ if __name__ == '__main__':
     # print '--------------------------------------------------------------------------'
     # if not os.path.isfile(g_img[:-5]+'.sdssxy'):        
     download_sdss(g_img, i_img)
-    js_calibrate(img1=g_img, img2=i_img)
+    calibrate(img1=g_img, img2=i_img)

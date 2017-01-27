@@ -502,9 +502,12 @@ def main(argv):
 	
 		ax1 = plt.subplot(2,2,2)
 		
-		if os.path.isfile('i_gmi_compl.out'):
-			iCompl,gmiCompl = np.loadtxt('i_gmi_compl.out',usecols=(0,1),unpack=True)
-			plt.plot(gmiCompl,iCompl, linestyle='--', color='green')
+		# if os.path.isfile('i_gmi_compl.out'):
+		# 	iCompl,gmiCompl = np.loadtxt('i_gmi_compl.out',usecols=(0,1),unpack=True)
+		# 	plt.plot(gmiCompl,iCompl, linestyle='--', color='green')
+		# if os.path.isfile('i_gmi_compl2.out'):
+		# 	iCompl,gmiCompl = np.loadtxt('i_gmi_compl2.out',usecols=(0,1),unpack=True)
+		# 	plt.plot(gmiCompl,iCompl, linestyle='--', color='blue')
 		
 		plt.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
 		plt.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
