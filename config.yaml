@@ -1,0 +1,21 @@
+# uchvc-tools configuration file
+object: AGC249525                     # the name of your object
+filters: [odi_g, odi_i]               # correct filter strings required
+instrument: podi                      # podi | 5odi | mosaic; script will verify using image header info
+
+odi_g:
+  fwhm: 8.0
+  daofind_threshold: 4.0
+  completeness: yes
+  compl_start: -4.0
+  compl_step: 0.25
+  
+
+odi_i:
+  fwhm: 8.0
+  daofind_threshold: 4.0
+  completeness: yes
+  compl_start: -4.0
+  compl_step: 0.25
+
+

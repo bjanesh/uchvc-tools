@@ -20,9 +20,16 @@ except ImportError :
 def main(argv):
 	
 	home_root = os.environ['HOME']
+	# set defaults for command line flags
 	imexam_flag = False
+	disp_flag = False
+	fwhm = 3.0
+	fwhm_string = repr(fwhm)
+	filter_file = home_root+'/projects/uchvc-tools/filter.txt'
+	filter_string = 'old'
+	
 	try:
-		opts, args = getopt.getopt(argv,"h",["imexam","disp=","fwhm=","dm=","filter="])
+		opts, args = getopt.getopt(argv,"h",["imexam","disp","fwhm","dm=","filter"])
 	except getopt.GetoptError:
 		print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --disp=(yes/no)'
 		sys.exit(2)
@@ -347,9 +354,14 @@ def main(argv):
 		i_y_c = [iy[i] for i in range(len(i_mag)) if (stars_circ[i])]
 		
 		# make a random reference cmd to compare to
-		
-		rCentx = 16.0*np.random.random()+2.0
-		rCenty = 16.0*np.random.random()+2.0
+		if not os.path.isfile('refCircle.center'):
+			rCentx = 16.0*np.random.random()+2.0
+			rCenty = 16.0*np.random.random()+2.0
+			with open('refCircle.center','w+') as rc:
+				print >> rc, '{:8.4f} {:8.4f}'.format(rCentx, rCenty)
+		else :
+			rCentx, rCenty = np.loadtxt('refCircle.center', usecols=(0,1), unpack=True)
+				
 		x_circr = [rCentx + 3.0*cosd(t) for t in range(0,359,1)]
 		y_circr = [rCenty + 3.0*sind(t) for t in range(0,359,1)]
 		
@@ -502,12 +514,15 @@ def main(argv):
 	
 		ax1 = plt.subplot(2,2,2)
 		
-		# if os.path.isfile('i_gmi_compl.out'):
-		# 	iCompl,gmiCompl = np.loadtxt('i_gmi_compl.out',usecols=(0,1),unpack=True)
-		# 	plt.plot(gmiCompl,iCompl, linestyle='--', color='green')
-		# if os.path.isfile('i_gmi_compl2.out'):
-		# 	iCompl,gmiCompl = np.loadtxt('i_gmi_compl2.out',usecols=(0,1),unpack=True)
-		# 	plt.plot(gmiCompl,iCompl, linestyle='--', color='blue')
+		if os.path.isfile('i_gmi_compl.gr.out'):
+			gmiCompl, iCompl = np.loadtxt('i_gmi_compl.gr.out',usecols=(0,1),unpack=True)
+			plt.plot(gmiCompl,iCompl, linestyle='--', color='green')
+		if os.path.isfile('i_gmi_compl.gr2.out'):
+			gmiCompl, iCompl = np.loadtxt('i_gmi_compl.gr2.out',usecols=(0,1),unpack=True)
+			plt.plot(gmiCompl,iCompl, linestyle='--', color='red')
+		if os.path.isfile('i_gmi_compl2.out'):
+			iCompl,gmiCompl = np.loadtxt('i_gmi_compl2.out',usecols=(0,1),unpack=True)
+			plt.plot(gmiCompl,iCompl, linestyle='--', color='blue')
 		
 		plt.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
 		plt.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')

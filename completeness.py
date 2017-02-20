@@ -5,16 +5,24 @@ import numpy as np
 from pyraf import iraf
 import glob
 #######################
-filter_ = 'g'   ######## change me!
+filter_ = 'odi_g'   ######## change me!
 #######################
+
 
 iraf.ptools(_doprint=0)
 iraf.tables(_doprint=0)
 
 iraf.unlearn(iraf.ptools.pselect,iraf.tables.tcreate,iraf.tables.tmatch,iraf.tables.tinfo,iraf.tables.tdump)
 m3,m4,m5,m6 = np.loadtxt('mask.reg',usecols=(2,3,4,5),unpack=True)
+
+for 
+    addstar("AGC249525_"//(s1)//"_sh", "", "default", "AGC249525_"//(s1)//"_sh_add."//(s3), y, z, nartstars)
+    daofind("AGC249525_"//(s1)//"_sh_add."//(s3)//".fits", "default")
+    phot("AGC249525_"//(s1)//"_sh_add."//(s3), "AGC249525_"//(s1)//"_sh_add."//(s3)//".fits.coo.1", "default", "")
+    imdel("AGC249525_"//(s1)//"_sh_add."//(s3), yes)
+
 # g image pselects
-for file_ in glob.glob('*add*.mag.1'):
+# for file_ in glob.glob('*add*.mag.1'):
     if not os.path.isfile(file_+'a'):
         print 'pselect-ing', file_
         if os.path.isfile('temp2') :    
@@ -31,7 +39,7 @@ for file_ in glob.glob('*add*.mag.1'):
         if os.path.isfile('temp1') :    
             os.remove('temp1')
         
-for file_ in glob.glob('*.art'):
+# for file_ in glob.glob('*.art'):
     if not os.path.isfile(file_[0:-4]+'.pselect'):
         print 'pselect-ing', file_
         if os.path.isfile('temp2') :    
@@ -48,13 +56,13 @@ for file_ in glob.glob('*.art'):
         if os.path.isfile('temp1') :    
             os.remove('temp1')
 
-for file_ in glob.glob('*.pselect'):
+# for file_ in glob.glob('*.pselect'):
     if not os.path.isfile("art_star_list."+filter_+"."+file_[-12:-8]+".tab"):
         print 'creating artificial star table from', file_
         iraf.tables.tcreate.setParam("nlines",0)
         iraf.tables.tcreate("art_star_list."+filter_+"."+file_[-12:-8]+".tab", "art_table.description", file_)
     
-for file_ in glob.glob('*.mag.1a'):
+# for file_ in glob.glob('*.mag.1a'):
     print 'reformatting', file_
     f1 = open(file_, 'r')
     f2 = open('temp1', 'w')
