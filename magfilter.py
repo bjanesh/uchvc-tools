@@ -396,6 +396,8 @@ def main(argv):
 		i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
 		i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
 		
+		print len(i_mag_fc), 'filter stars in circle'
+		
 		with open(fcirc_file,'w+') as f3:
 			for i,x in enumerate(i_x_fc):
 				print >> f3, i_x_fc[i], i_y_fc[i]
@@ -430,6 +432,8 @@ def main(argv):
 		i_decd_fcr = [i_decd[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
 		i_x_fcr = [ix[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
 		i_y_fcr = [iy[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+		
+		print len(i_mag_fcr), 'filter stars in ref. circle'
 		
 		# 
 		# print "{0:3d} stars in filter, {1:3d} stars in circle, {2:3d} stars in both.".format(len(i_mag_f),len(i_mag_c),len(i_mag_fc))

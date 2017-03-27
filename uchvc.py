@@ -668,7 +668,7 @@ g0 = g_i - (kg*amg) + apcor_g
 i0 = i_i - (ki*ami) + apcor_i
 
 download_sdss(fits_g, fits_i, gmaglim = 22.0)
-eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = fits_g, img2 = fits_i)
+eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i, gXAIRMASS, iXAIRMASS = js_calibrate(img1 = fits_g, img2 = fits_i)
 
 # use the instrumental magnitude and initial color guess to ITERATE 
 # until you reach a converged calibrated magnitude/color

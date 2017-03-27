@@ -121,7 +121,7 @@ def main(argv):
     
     with open(out_file, 'w+') as f1:
         print >> f1, '# dm mpc x_cent y_cent ra_cent dec_cent S(x,y) N %'
-        for dm in tqdm(np.arange(25.75,26.75,0.01)):
+        for dm in tqdm(np.arange(22.00,26.99,0.01)):
             mpc = pow(10,((dm + 5.)/5.))/1000000.
             # print '================================================================================'
             # print 'DM = {0:6.3f}, dist (Mpc) = {1:6.3f}'.format(dm, mpc)
