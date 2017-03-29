@@ -36,32 +36,32 @@ if not unpacked :
     call(funpack_cmd, shell=True)
 
 for file_ in os.listdir("./"):
-    if file_.endswith("i_match.fits"):
+    if file_.endswith("i.fits"):
         fits_file_i = file_
     if file_.endswith("g.fits"):
         fits_file_g = file_
 
 path = os.getcwd()
 steps = path.split('/')
-title_string = steps[-1].upper()        # which should always exist in the directory
+title_string = steps[-1]        # which should always exist in the directory
         
 # copy the good region (no cell gaps) to a new file        
-fits_g = title_string+'_g_sh.fits'
+fits_g = title_string+'_g.fits'
 if not os.path.isfile(fits_g) :
     iraf.images.imcopy(fits_file_g+'[3000:14000,3000:14000]',fits_g,verbose="yes")
     
-fits_i = title_string+'_i_sh.fits'
+fits_i = title_string+'_i.fits'
 if not os.path.isfile(fits_i) :
     iraf.images.imcopy(fits_file_i+'[3000:14000,3000:14000]',fits_i,verbose="yes")
 
-# remove the unpacked fits file to save space, keep the .fz
-try:
-    if os.path.isfile(fits_file_i) :    
-        os.remove(fits_file_i)
-    if os.path.isfile(fits_file_g) :
-        os.remove(fits_file_g)
-except:
-    time.sleep(0.1)
+# # remove the unpacked fits file to save space, keep the .fz
+#try:
+#    if os.path.isfile(fits_file_i) :    
+#        os.remove(fits_file_i)
+#    if os.path.isfile(fits_file_g) :
+#        os.remove(fits_file_g)
+#except:
+#    time.sleep(0.1)
     
 # make an imsets file
 if not os.path.isfile(title_string+'.imsets') :
@@ -300,7 +300,7 @@ if not os.path.isfile(fits_i+'.mag.1a') :
 
 # mkobsfile stuff
 # mkobsfile MATCHES sources between images to get rid of random sources, things that are masked in one or the other, etc.
-iraf.digiphot.mkobsfile.setParam('photfiles',title_string+'_*_sh.fits.mag.1a')
+iraf.digiphot.mkobsfile.setParam('photfiles',title_string+'_*.fits.mag.1a')
 iraf.digiphot.mkobsfile.setParam('idfilters','odi_i,odi_g')
 iraf.digiphot.mkobsfile.setParam('imsets',title_string+'.imsets')
 iraf.digiphot.mkobsfile.setParam('obscolumns','2 3 4 5')
@@ -376,7 +376,7 @@ if not os.path.isfile('apcor.tbl.txt'):
     ap_cand1_i = [(ap_ix[i],ap_iy[i],float(ap_fwhm_i[i]),float(ap_peak_i[i]),float(ap_mag_i[i])) for i in range(len(ap_ix)) if (ap_peak_i[i] != 'INDEF' and ap_fwhm_i[i] != 'INDEF' and ap_mag_i[i] != 'INDEF')]
     
     # print ap_cand1_g
-    if fwhm_g < 10.0 and fwhm_i < 10.0 :
+    if fwhm_g < 20.0 and fwhm_i < 20.0 :
         ap_cand_g = [ap_cand1_g[i] for i in range(len(ap_cand1_g)) if (10000. < ap_cand1_g[i][3] < 50000.)]
         print ap_cand_g
         ap_cand_i = [ap_cand1_i[i] for i in range(len(ap_cand1_i)) if (20000. < ap_cand1_i[i][3] < 50000.)]
@@ -646,7 +646,7 @@ txdump_out.close()
 
 call('sort -g phot_sources.txdump > temp', shell=True)
 call('mv temp phot_sources.txdump', shell=True)
-call('awk -f ~/projects/uchvc-tools/make_calibdat phot_sources.txdump > calibration.dat', shell=True)
+call('awk -f ~/uchvc-tools/make_calibdat phot_sources.txdump > calibration.dat', shell=True)
 
 nid,gx,gy,g_i,g_ierr,ix,iy,i_i,i_ierr = np.loadtxt('calibration.dat',usecols=(0,1,2,4,5,11,12,14,15),unpack=True)
 
