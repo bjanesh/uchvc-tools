@@ -48,7 +48,7 @@ def bkg_boxes(frame,nboxes,length,sources=False):
 		  The centers that are within the image bounds are returned
 		  in case you need to examine the regions used.
 		  """      
-		  box = image[x1:x2,y1:y2]
+		  box = image[int(x1):int(x2),int(y1):int(y2)]
 		  
 		if (box >= 0).all() == True:
 			"""
@@ -81,7 +81,7 @@ def bkg_boxes(frame,nboxes,length,sources=False):
 	#Array will be returned for plotting if wanted
 	max_std = np.argmax(bg_stats[:,2])
 	max_center = centers[max_std]
-	max_box = image[max_center[0]-side:max_center[0]+side,max_center[1]-side:max_center[1]+side]
+	max_box = image[int(max_center[0]-side):int(max_center[0]+side),int(max_center[1]-side):int(max_center[1]+side)]
 	#plt.imshow(max_box,origin='lower', cmap='Greys_r')
 	#plt.show()
 	
