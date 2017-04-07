@@ -50,41 +50,51 @@ def make_filter(dm, filter_file):
     # based on Girardi ugriz isochrones, see Walsh et al. and Betsey's thesis chapter
     if filter_file.endswith("iso_filter.txt") :
         gi_iso,i_iso = np.loadtxt(filter_file, usecols=(0,1),unpack=True)
+        i_m_iso = i_iso + dm
+        verts = zip(gi_iso,i_m_iso)        # set up the Path necessary for testing membership
+        cm_filter = Path(verts)
+        
+    elif filter_file == 'none':
+        gi_iso = None
+        i_m_iso = None
+        cm_filter = None
     else :
         g_iso,i_iso = np.loadtxt(filter_file, usecols=(8,10),unpack=True)
         gi_iso = g_iso - i_iso
-    i_m_iso = i_iso + dm     # scale the filter to the DM: to find the apparent mag. just add the DM
-    
-    verts = zip(gi_iso,i_m_iso)        # set up the Path necessary for testing membership
-    cm_filter = Path(verts)
+        i_m_iso = i_iso + dm
+        verts = zip(gi_iso,i_m_iso)        # set up the Path necessary for testing membership
+        cm_filter = Path(verts)     # scale the filter to the DM: to find the apparent mag. just add the DM
     return cm_filter, gi_iso, i_m_iso
 
 def filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1):
+    if cm_filter == None:
+        stars_f = [True] * len(gmi)
     # first get the stars that are in the filter (points & 1-sig error bars!)
-    stars_f = list(gmi)
-    for i in range(len(gmi)) :
-        nsteps_color = int(abs((float(filter_sig)*gmi_err[i])//0.001))
-        nsteps_mag = int(abs((float(filter_sig)*i_ierr[i])//0.001))
-        
-        if nsteps_color == 0 :
-            nsteps_color = 1
-        if nsteps_mag == 0 :
-            nsteps_mag = 1
-        
-        # each error bar, sampled as points
-        cm_points_l = [(gmi[i]-0.01*j*gmi_err[i],i_mag[i]) for j in range(nsteps_color)]
-        cm_points_r = [(gmi[i]+0.01*j*gmi_err[i],i_mag[i]) for j in range(nsteps_color)]
-        cm_points_u = [(gmi[i],i_mag[i]-0.01*j*i_ierr[i]) for j in range(nsteps_mag)]
-        cm_points_d = [(gmi[i],i_mag[i]+0.01*j*i_ierr[i]) for j in range(nsteps_mag)]
-                
-        # check if the errorbar points fall in the filter        
-        stars_f_l = cm_filter.contains_points(cm_points_l)        
-        stars_f_r = cm_filter.contains_points(cm_points_r)        
-        stars_f_u = cm_filter.contains_points(cm_points_u)        
-        stars_f_d = cm_filter.contains_points(cm_points_d)        
-        
-        # if any part of any error bar is in the filter, it gets selected (True)
-        stars_f[i] = any(stars_f_l) | any(stars_f_r) | any(stars_f_u) | any(stars_f_d)  
+    else:
+        stars_f = list(gmi)
+        for i in range(len(gmi)) :
+            nsteps_color = int(abs((float(filter_sig)*gmi_err[i])//0.001))
+            nsteps_mag = int(abs((float(filter_sig)*i_ierr[i])//0.001))
+            
+            if nsteps_color == 0 :
+                nsteps_color = 1
+            if nsteps_mag == 0 :
+                nsteps_mag = 1
+            
+            # each error bar, sampled as points
+            cm_points_l = [(gmi[i]-0.01*j*gmi_err[i],i_mag[i]) for j in range(nsteps_color)]
+            cm_points_r = [(gmi[i]+0.01*j*gmi_err[i],i_mag[i]) for j in range(nsteps_color)]
+            cm_points_u = [(gmi[i],i_mag[i]-0.01*j*i_ierr[i]) for j in range(nsteps_mag)]
+            cm_points_d = [(gmi[i],i_mag[i]+0.01*j*i_ierr[i]) for j in range(nsteps_mag)]
+                    
+            # check if the errorbar points fall in the filter        
+            stars_f_l = cm_filter.contains_points(cm_points_l)        
+            stars_f_r = cm_filter.contains_points(cm_points_r)        
+            stars_f_u = cm_filter.contains_points(cm_points_u)        
+            stars_f_d = cm_filter.contains_points(cm_points_d)        
+            
+            # if any part of any error bar is in the filter, it gets selected (True)
+            stars_f[i] = any(stars_f_l) | any(stars_f_r) | any(stars_f_u) | any(stars_f_d)  
     
     # figure out how many stars are in the filter
     check = [stars_f[i] for i in range(len(stars_f)) if (stars_f[i])]
@@ -222,6 +232,9 @@ def main(argv):
             if arg == 'old' :
                 filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
                 filter_string = 'old'
+            elif arg == 'none':
+                filter_file = None
+                filter_string = 'none'
             else: 
                 filter_file = os.path.dirname(os.path.abspath(__file__))+'/iso_filter.txt'
                 filter_string = 'iso'
@@ -351,7 +364,7 @@ def main(argv):
             print >> f1, '{0:12.4f} {1:12.4f} {2:10.5f} {3:9.5f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(ixRed[i],iyRed[i], i_radRed[i], i_decdRed[i], g_magRed[i], i_magRed[i], g_magRed[i]-i_magRed[i])
         f1.close()
     
-    if dm2 :
+    if dm2 and filter_string != 'none':
         dms = np.arange(dm,dm2,0.01)
     else:
         dms = [dm]
