@@ -156,11 +156,16 @@ def download_sdss(img1, img2, gmaglim = 21):
     pvlist = hdr['PV*']
     for pv in pvlist:
         hdr.remove(pv)
+        
     
     # open the second fits image
     hdulist = fits.open(img2)
     hdr_r = hdulist[0].header
     hdulist.close()
+    
+    pvlist = hdr_r['PV*']
+    for pv in pvlist:
+        hdr_r.remove(pv)
     
     # Parse the WCS keywords in the primary HDU
     w = wcs.WCS(hdr)
@@ -322,7 +327,7 @@ def calibrate(img1 = None, img2 = None):
         print 'You need some non-core python packages and a working IRAF to run this program'
         print "Try 'pip install astropy numpy scipy matplotlib pyraf' and try again"
 
-    img_root = img1[:-10]
+    img_root = img1.split('_')[0]
     
     # values determined by ralf/daniel @ wiyn
     kg = 0.20
@@ -730,6 +735,8 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     kr = 0.12
     ki = 0.058
 
+    iraf.ptools(_doprint=0)
+
     # you're going to need the average stellar fwhm to compute a aperture size
     # ralf or steven probably write one to the image header during QR/etc
     # just use that value here
@@ -758,6 +765,9 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
             # fwhm2 = hdr2['SEEING']/0.11 # divide by the ODI pixel scale
             # fwhm1 = getfwhm(img1)
             # fwhm2 = getfwhm(img2)
+    else:
+        fwhm1 = 7.0
+        fwhm2 = 7.0
 
     # alas, we must use IRAF apphot to do the measuring
     # first set common parameters (these shouldn't change if you're using ODI)
@@ -876,10 +886,10 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     dg = g - g0
     dge = np.sqrt(ge**2 + gMERR**2)
 
-    podicut, sdsscut = 0.0081, 0.025
+    podicut, sdsscut = 0.05, 0.05
     # print np.median(gSERR), np.median(iSERR)
     # cuts for better fits go here
-    errcut = [j for j in range(len(gMERR)) if (gMERR[j] < podicut and iMERR[j] < podicut and ge[j] < sdsscut and ie[j] < sdsscut and gSKY[j] > np.median(gSERR) and iSKY[j] > np.median(iSERR) and di[j] > 25.75)]
+    errcut = [j for j in range(len(gMERR)) if (gMERR[j] < podicut and iMERR[j] < podicut and ge[j] < sdsscut and ie[j] < sdsscut and gSKY[j] > np.median(gSERR) and iSKY[j] > np.median(iSERR) and di[j] < 26.5 and di[j] > 26.0)]
 
     if verbose:
         for j in range(len(gi[errcut])):
@@ -1069,7 +1079,7 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     # hdulist1.close()
     # hdulist2.close()
     
-    return eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i, gXAIRMASS, iXAIRMASS
+    return eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i
 
 if __name__ == '__main__':
     # ask user input on which files to run on
@@ -1081,15 +1091,15 @@ if __name__ == '__main__':
     # else:
     path = os.getcwd()
     steps = path.split('/')
-    folder = steps[-1].upper()
+    folder = steps[-1].lower()
     
-    g_img = folder+'_g_sh.fits'
+    g_img = folder+'_odi_g.fits'
     # print ''
     # # if not os.path.isfile('m13-se.r.phot.1'):
     # #     i_img = raw_input("Enter the r or i image file name (don't worry, I know what to do): \n")
     # # else:
-    i_img = folder+'_i_sh.fits'
+    i_img = folder+'_odi_r.fits'
     # print '--------------------------------------------------------------------------'
-    # if not os.path.isfile(g_img[:-5]+'.sdssxy'):        
+    # if not os.path.isfile(g_img.nofits()+'.sdssxy'):        
     download_sdss(g_img, i_img)
-    calibrate(img1=g_img, img2=i_img)
+    js_calibrate(img1=g_img, img2=i_img)

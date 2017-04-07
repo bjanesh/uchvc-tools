@@ -1,4 +1,5 @@
 #! /usr/local/bin/python
+# -*- coding: utf-8 -*-
 import os, sys, getopt, warnings
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,7 +28,7 @@ def deg2HMS(ra='', dec='', round=False):
             decS = int((abs((dec-deg)*60)-decM)*60)
         else:
             decS = (abs((dec-deg)*60)-decM)*60
-        DEC = '{0}{1}:{2}:{3}'.format(ds, deg, decM, decS)
+        DEC = '{0}{1:02d}:{2:02d}:{3:04.1f}'.format(ds, deg, decM, decS)
 
     if ra:
         if str(ra)[0] == '-':
@@ -38,7 +39,7 @@ def deg2HMS(ra='', dec='', round=False):
             raS = int(((((ra/15)-raH)*60)-raM)*60)
         else:
             raS = ((((ra/15)-raH)*60)-raM)*60
-        RA = '{0}{1}:{2}:{3}'.format(rs, raH, raM, raS)
+        RA = '{0}{1:02d}:{2:02d}:{3:04.1f}'.format(rs, raH, raM, raS)
     if ra and dec:
         return (RA, DEC)
     else:
@@ -87,7 +88,7 @@ def filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1):
     
     # figure out how many stars are in the filter
     check = [stars_f[i] for i in range(len(stars_f)) if (stars_f[i])]
-    print len(check), "stars in filter"
+    # print len(check), "stars in filter"
     return stars_f
 
 def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
@@ -119,15 +120,15 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     props = source_properties(S, segm)
     columns = ['id', 'maxval_xpos', 'maxval_ypos', 'max_value', 'area']
     tbl = properties_table(props, columns=columns)
-    print tbl
+    # print tbl
     # rand_cmap = random_cmap(segm.max + 1, random_state=12345)
     
     # find the maximum point in the grid and center the circle there
     x_cent, y_cent = np.unravel_index(grid_gaus.argmax(),grid_gaus.shape)
     x_cent_S, y_cent_S = np.unravel_index(S.argmax(),S.shape)
-    print 'Max of S located at:','('+'{0:6.3f}'.format(y_cent_S)+','+'{0:6.3f}'.format(x_cent_S)+')'
-    print 'Value of S at above:','{0:6.3f}'.format(S[x_cent_S][y_cent_S])
-    print 'Number of bins above S_th: {0:4d}'.format(len(above_th))
+    # print 'Max of S located at:','('+'{0:6.3f}'.format(y_cent_S)+','+'{0:6.3f}'.format(x_cent_S)+')'
+    # print 'Value of S at above:','{0:6.3f}'.format(S[x_cent_S][y_cent_S])
+    # print 'Number of bins above S_th: {0:4d}'.format(len(above_th))
     return xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl 
 
 def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
@@ -160,10 +161,11 @@ def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
 
     al,loc,beta=lognorm.fit(valsLP)
     pct = 100.0*lognorm.cdf(dists, al, loc=loc, scale=beta)
-    print 'Significance of detection:','{0:6.3f}%'.format(pct)
+    # print 'Significance of detection:','{0:6.3f}%'.format(pct)
 
     if samples > 10000 and pct > 90.:
         plt.clf()
+        plt.figure(figsize=(9,4))
         plt.plot(x, lognorm.pdf(x, al, loc=loc, scale=beta),'r-', lw=2, alpha=0.6, label='lognormal distribution')
         plt.scatter(centers, bins, edgecolors='none', label='histogram of $\sigma$ from '+repr(samples)+' \nuniform random samples')
         ax = plt.subplot(111)
@@ -173,9 +175,10 @@ def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
         plt.xlabel('$\sigma$ above local mean')
         plt.ylabel('$P(\sigma = X)$')
         plt.legend(loc='best', frameon=True)
-        ax.set_aspect(3)
+        # ax.set_aspect(3)
         # plt.show()
-        plt.savefig(title+'_'+repr(dm)+'_'+repr(fwhm)+'_dist.pdf')
+        plt.savefig('{:s}_{:5.2f}_{:3.1f}_dist.pdf'.format(title,dm,fwhm))
+        
     return pct
     
 def main(argv):
@@ -190,7 +193,7 @@ def main(argv):
     dm2 = None
     
     try:
-        opts, args = getopt.getopt(argv,"h",["imexam","disp","fwhm","dm=","dm2","filter"])
+        opts, args = getopt.getopt(argv,"h",["imexam","disp","fwhm","dm=","dm2=","filter"])
     except getopt.GetoptError:
         print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --disp=(yes/no)'
         sys.exit(2)
@@ -246,7 +249,7 @@ def main(argv):
 
     # read in magnitudes, colors, and positions(x,y)
     gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
-    print len(gxr), "total stars"
+    # print len(gxr), "total stars"
     
     # filter out the things with crappy color errors
     color_error_cut = np.sqrt(2.0)*0.2
@@ -269,10 +272,10 @@ def main(argv):
     
     bcenters = (bedges[:-1] + bedges[1:]) / 2
     bxvals = [3.75,3.75,3.75,3.75,3.75,3.75,3.75,3.75,3.75,3.75]
-    print bcenters
-    print i_ierrAVG
-    print gmi_errAVG
-    print len(gx), "after color+mag error cut"
+    # print bcenters
+    # print i_ierrAVG
+    # print gmi_errAVG
+    # print len(gx), "after color+mag error cut"
     # nid = np.loadtxt(mag_file,usecols=(0,),dtype=int,unpack=True)
     pixcrd = zip(ix,iy)
     
@@ -304,12 +307,12 @@ def main(argv):
     world = w.all_pix2world(pixcrd, 1)
     ra_corner, dec_corner = w.all_pix2world(0,0,1)
     ra_c_d,dec_c_d = deg2HMS(ra=ra_corner, dec=dec_corner, round=True)
-    print 'Corner RA:',ra_c_d,':: Corner Dec:',dec_c_d
+    # print 'Corner RA:',ra_c_d,':: Corner Dec:',dec_c_d
     
     fwhm_i = 12.0 #fits_i[0].header['FWHMPSF']
     fwhm_g = 9.0 # fits_g[0].header['FWHMPSF']
     
-    print 'Image FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i)
+    # print 'Image FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i)
     
     fits_i.close()
     fits_g.close()
@@ -352,6 +355,8 @@ def main(argv):
         dms = np.arange(dm,dm2,0.01)
     else:
         dms = [dm]
+
+    search = open('search.txt','w+')
     
     for dm in dms:
         mpc = pow(10,((dm + 5.)/5.))/1000000.
@@ -443,9 +448,9 @@ def main(argv):
         i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
         i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
         
-        print len(i_mag_fc), 'filter stars in circle'
+        # print len(i_mag_fc), 'filter stars in circle'
         
-        print 'max i mag in circle = ', min(i_mag_fc)
+        # print 'max i mag in circle = ', min(i_mag_fc)
         
         rs = np.array([45, 55, 65, 75, 85, 90,180])
         for r in rs:    
@@ -476,7 +481,7 @@ def main(argv):
         i_x_fcr = [ix[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
         i_y_fcr = [iy[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
         
-        print len(i_mag_fcr), 'filter stars in ref. circle'
+        # print len(i_mag_fcr), 'filter stars in ref. circle'
         
         # 
         # print "{0:3d} stars in filter, {1:3d} stars in circle, {2:3d} stars in both.".format(len(i_mag_f),len(i_mag_c),len(i_mag_fc))
@@ -488,7 +493,7 @@ def main(argv):
         circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
         ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
         ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=False)
-        print 'Peak RA:',ra_c_d,':: Peak Dec:',dec_c_d
+        # print 'Peak RA:',ra_c_d,':: Peak Dec:',dec_c_d
         
         hi_c_ra, hi_c_dec = 142.5104167, 16.6355556
         hi_c_x, hi_c_y = abs((hi_c_ra-ra_c)*60), abs((hi_c_dec-dec_c)*60)
@@ -498,6 +503,11 @@ def main(argv):
         hi_pix_x,hi_pix_y = w.wcs_world2pix(hi_c_ra,hi_c_dec,1)
         # print hi_pix_x, hi_pix_y
         
+        print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α ={:s}, δ ={:s} | N = {:4d} | σ = {:6.3f} | β = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, n_in_filter, S[x_cent_S][y_cent_S], pct)
+        print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:4d} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, n_in_filter, S[x_cent_S][y_cent_S], pct)        
+
+        #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
+        #iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no') 
         if pct > 90.:
             f1 = open(mark_file, 'w+')
             for i in range(len(i_x_f)) :
@@ -513,17 +523,17 @@ def main(argv):
                 for i,x in enumerate(i_x_fc):
                     print >> f3, i_x_fc[i], i_y_fc[i]
             
-            center_file = 'im_cens_'+dm_string+'_'+fwhm_string+'.dat'
-            im_cens = open(center_file,'w+')
-            for k,xp in enumerate(tbl):
-                circ_c_x = (yedges[tbl['maxval_xpos'][k]]/60.)+ra_corner
-                circ_c_y = (xedges[tbl['maxval_ypos'][k]]/60.)+dec_corner
-                circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
-                # ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
-                print circ_c_x, circ_c_y
-                print >> im_cens, -circ_pix_x, circ_pix_y, 'circle_center'+repr(k)
-            print >> im_cens, hi_pix_x, hi_pix_y, 'HI_centroid'
-            im_cens.close()
+            # center_file = 'im_cens_'+dm_string+'_'+fwhm_string+'.dat'
+            # im_cens = open(center_file,'w+')
+            # for k,xp in enumerate(tbl):
+            #     circ_c_x = (yedges[tbl['maxval_xpos'][k]]/60.)+ra_corner
+            #     circ_c_y = (xedges[tbl['maxval_ypos'][k]]/60.)+dec_corner
+            #     circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
+            #     # ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
+            #     # print circ_c_x, circ_c_y
+            #     print >> im_cens, -circ_pix_x, circ_pix_y, 'circle_center'+repr(k)
+            # print >> im_cens, hi_pix_x, hi_pix_y, 'HI_centroid'
+            # im_cens.close()
             
             mark_radius = int(pltsig*60/0.11)
             ann_inn = int(np.ceil(pltsig*60/0.11/100.0))*100
@@ -531,7 +541,7 @@ def main(argv):
             mark_radii = str(repr(mark_radius-2)+','+repr(mark_radius-1)+','+repr(mark_radius)+','+repr(mark_radius+1)+','+repr(mark_radius+2))
             anni_radii = str(repr(ann_inn-2)+','+repr(ann_inn-1)+','+repr(ann_inn)+','+repr(ann_inn+1)+','+repr(ann_inn+2))
             anno_radii = str(repr(ann_out-2)+','+repr(ann_out-1)+','+repr(ann_out)+','+repr(ann_out+1)+','+repr(ann_out+2))
-            print mark_radius, ann_inn, ann_out
+            # print mark_radius, ann_inn, ann_out
             
             if disp_flag :
                 from pyraf import iraf
@@ -558,6 +568,7 @@ def main(argv):
             # setup the pdf output
             pp = PdfPages('f_'+ out_file)
             plt.clf()
+            plt.figure(figsize=(11,8.5))
             # plot
             # print "Plotting for m-M = ",dm
             ax0 = plt.subplot(2,2,1)
@@ -649,9 +660,9 @@ def main(argv):
         
             pp.savefig()
             pp.close()
-        else :
-            print 'detection at dm='+repr(dm)+' not significant enough to look at plots'
-    
+        # else :
+            # print 'detection at dm='+repr(dm)+' not significant enough to look at plots'
+    search.close()    
     if imexam_flag :
         iraf.unlearn(iraf.tv.imexamine, iraf.rimexam)
         iraf.tv.rimexam.setParam('radius',int(fwhm_i))

@@ -14,7 +14,9 @@ import aplpy
 from scipy.stats import binned_statistic_2d
 import matplotlib.patches as patches
 
-hdulist = fits.open('LeoT_i.fits')
+path = os.getcwd()
+title_string = path.split('/')[-1]
+hdulist = fits.open(title_string+'_i.fits')
 hdu = hdulist[0]
 naxis1, naxis2 = hdu.header['NAXIS1'], hdu.header['NAXIS2']
 w = wcs.WCS(hdu.header)
