@@ -233,7 +233,7 @@ def main(argv):
                 filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
                 filter_string = 'old'
             elif arg == 'none':
-                filter_file = None
+                filter_file = 'none'
                 filter_string = 'none'
             else: 
                 filter_file = os.path.dirname(os.path.abspath(__file__))+'/iso_filter.txt'

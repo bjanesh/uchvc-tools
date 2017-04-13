@@ -657,7 +657,7 @@ txdump_out.close()
 
 call('sort -g phot_sources.txdump > temp', shell=True)
 call('mv temp phot_sources.txdump', shell=True)
-call('awk -f ~/uchvc-tools/make_calibdat phot_sources.txdump > calibration.dat', shell=True)
+call('awk -f ~/projects/uchvc-tools/make_calibdat phot_sources.txdump > calibration.dat', shell=True)
 
 nid,gx,gy,g_i,g_ierr,ix,iy,i_i,i_ierr = np.loadtxt('calibration.dat',usecols=(0,1,2,4,5,11,12,14,15),unpack=True)
 
