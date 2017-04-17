@@ -156,11 +156,16 @@ def download_sdss(img1, img2, gmaglim = 21):
     pvlist = hdr['PV*']
     for pv in pvlist:
         hdr.remove(pv)
+        
     
     # open the second fits image
     hdulist = fits.open(img2)
     hdr_r = hdulist[0].header
     hdulist.close()
+    
+    pvlist = hdr_r['PV*']
+    for pv in pvlist:
+        hdr_r.remove(pv)
     
     # Parse the WCS keywords in the primary HDU
     w = wcs.WCS(hdr)
@@ -322,7 +327,7 @@ def calibrate(img1 = None, img2 = None):
         print 'You need some non-core python packages and a working IRAF to run this program'
         print "Try 'pip install astropy numpy scipy matplotlib pyraf' and try again"
 
-    img_root = img1[:-10]
+    img_root = img1.split('_')[0]
     
     # values determined by ralf/daniel @ wiyn
     kg = 0.20
@@ -730,6 +735,8 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     kr = 0.12
     ki = 0.058
 
+    iraf.ptools(_doprint=0)
+
     # you're going to need the average stellar fwhm to compute a aperture size
     # ralf or steven probably write one to the image header during QR/etc
     # just use that value here
@@ -758,6 +765,9 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
             # fwhm2 = hdr2['SEEING']/0.11 # divide by the ODI pixel scale
             # fwhm1 = getfwhm(img1)
             # fwhm2 = getfwhm(img2)
+    else:
+        fwhm1 = 7.0
+        fwhm2 = 7.0
 
     # alas, we must use IRAF apphot to do the measuring
     # first set common parameters (these shouldn't change if you're using ODI)
@@ -876,10 +886,10 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     dg = g - g0
     dge = np.sqrt(ge**2 + gMERR**2)
 
-    podicut, sdsscut = 0.0081, 0.025
+    podicut, sdsscut = 0.05, 0.05
     # print np.median(gSERR), np.median(iSERR)
     # cuts for better fits go here
-    errcut = [j for j in range(len(gMERR)) if (gMERR[j] < podicut and iMERR[j] < podicut and ge[j] < sdsscut and ie[j] < sdsscut and gSKY[j] > np.median(gSERR) and iSKY[j] > np.median(iSERR) and di[j] > 25.75)]
+    errcut = [j for j in range(len(gMERR)) if (gMERR[j] < podicut and iMERR[j] < podicut and ge[j] < sdsscut and ie[j] < sdsscut and gSKY[j] > np.median(gSERR) and iSKY[j] > np.median(iSERR) )]#and di[j] < 26.5 and di[j] > 26.0)]
 
     if verbose:
         for j in range(len(gi[errcut])):
@@ -985,91 +995,93 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     plt.savefig(img_root+'_photcal_js.pdf')
     
     # podicut, sdsscut = 0.003, 0.04
-    errcutzp = np.where((ge < 0.02) & (gMERR <0.003))
+    errcutzp = np.where((ge < 0.05) & (gMERR <0.05))
     # print np.median(gSERR), np.median(iSERR)
     # cuts for better fits go here
     # errcut = [j for j in range(len(gMERR)) if (gMERR[j] < podicut and iMERR[j] < podicut and ge[j] < sdsscut and ie[j] < sdsscut and gSKY[j] > np.median(gSERR) and iSKY[j] > np.median(iSERR))]
-    # plt.clf()
-    # hdulist1 = ast.io.fits.open(img1)
-    # hdulist2 = ast.io.fits.open(img2)
-    # ax1 = plt.subplot(2,2,1, projection=ast.wcs.WCS(hdulist1[0].header))
-    # # plt.imshow(hdulist[0].data, origin='lower', cmap='Greys_r', vmin=500., vmax=2000.)
-    # plt.scatter(gXPOS[errcut], gYPOS[errcut], c=star_zp_g[errcut]-np.median(star_zp_g[errcut]), edgecolor='none', alpha=1.0, cmap=cm.rainbow)
-    # 
-    # plt.xlabel('ra (SDSS $g$)')
-    # plt.ylabel('dec')
-    # plt.xlim(0,11000)
-    # plt.ylim(0,11000)
-    # cb = plt.colorbar()
-    # sig = np.std(star_zp_g[errcut])
-    # cb.set_label('diff.from median ZP ({0:5.2f})'.format(np.median(star_zp_g[errcut])))
-    # # cb.set_ticks([-7.0*sig,-6.0*sig,-5.0*sig,-4.0*sig,-3.0*sig,-2.0*sig,-1.0*sig,0.0,sig,2.0*sig,3.0*sig,4.0*sig,5.0*sig,6.0*sig,7.0*sig,8.0*sig])
-    # # cb.set_ticklabels(['{0:5.2f}'.format(-7.0*sig),'{0:5.2f}'.format(-6.0*sig),'{0:5.2f}'.format(-5.0*sig),'{0:5.2f}'.format(-4.0*sig),'{0:5.2f}'.format(-3.0*sig),'{0:5.2f}'.format(-2.0*sig),'{0:5.2f}'.format(-1.0*sig),'{0:5.2f}'.format(0.0),'{0:5.2f}'.format(sig), '{0:5.2f}'.format(2.0*sig), '{0:5.2f}'.format(3.0*sig), '{0:5.2f}'.format(4.0*sig), '{0:5.2f}'.format(5.0*sig), '{0:5.2f}'.format(6.0*sig), '{0:5.2f}'.format(7.0*sig), '{0:5.2f}'.format(8.0*sig)])
-    # 
-    # ax2 = plt.subplot(2,2,2)
-    # ax2.get_xaxis().set_visible(False)
-    # ax2.get_yaxis().set_visible(False)
-    # ota_mean, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_g[errcut], statistic='mean', bins=[3,3])
-    # ota_median, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_g[errcut], statistic='median', bins=[3,3])
-    # ota_count, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_g[errcut], statistic='count', bins=[3,3])
-    # ota_std, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_g[errcut], statistic=np.std, bins=[3,3])
-    # print ota_mean, ota_median, ota_count, ota_std
-    # 
-    # for j in range(3):
-    #     for k in range(3):
-    #         plt.text(ota_x[j]+300, ota_y[k]+3100, 'mean = {0:5.2f}'.format(ota_mean[j,k]), fontsize=6)
-    #         plt.text(ota_x[j]+300, ota_y[k]+2400, 'median = {0:5.2f}'.format(ota_median[j,k]), fontsize=6)
-    #         plt.text(ota_x[j]+300, ota_y[k]+1700, 'ota - global = {0:5.2f}'.format(ota_median[j,k]-np.median(star_zp_g[errcut])), fontsize=6)
-    #         plt.text(ota_x[j]+300, ota_y[k]+1000, 'std = {0:5.2f}'.format(ota_std[j,k]), fontsize=6)
-    #         plt.text(ota_x[j]+300, ota_y[k]+300,  'N = {0:5d}'.format(int(ota_count[j,k])), fontsize=6)
-    # 
-    # plt.hlines(ota_y[1:3],0,11000,linestyles='dashed')
-    # plt.vlines(ota_x[1:3],0,11000,linestyles='dashed')
-    # plt.xlim(0,11000)
-    # plt.ylim(0,11000)
-    # 
-    # ax3 = plt.subplot(2,2,3, projection=ast.wcs.WCS(hdulist2[0].header))
-    # # plt.imshow(hdulist[0].data, origin='lower', cmap='Greys_r', vmin=500., vmax=2000.)
-    # plt.scatter(gXPOS[errcut], gYPOS[errcut], c=star_zp_i[errcut]-np.median(star_zp_i[errcut]), edgecolor='none', alpha=1.0, cmap=cm.rainbow)
-    # 
-    # plt.xlabel('ra (SDSS $i$)')
-    # plt.ylabel('dec')
-    # plt.xlim(0,11000)
-    # plt.ylim(0,11000)
-    # cb = plt.colorbar()
-    # sig = np.std(star_zp_i[errcut])
-    # cb.set_label('diff.from median ZP ({0:5.2f})'.format(np.median(star_zp_i[errcut])))
-    # # cb.set_ticks([-1.0*sig,0.0,sig,2.0*sig,3.0*sig,4.0*sig,5.0*sig,6.0*sig,7.0*sig,8.0*sig])
-    # # cb.set_ticklabels(['{0:5.2f}'.format(-1.0*sig),'{0:5.2f}'.format(0.0),'{0:5.2f}'.format(sig), '{0:5.2f}'.format(2.0*sig), '{0:5.2f}'.format(3.0*sig), '{0:5.2f}'.format(4.0*sig), '{0:5.2f}'.format(5.0*sig), '{0:5.2f}'.format(6.0*sig), '{0:5.2f}'.format(7.0*sig), '{0:5.2f}'.format(8.0*sig)])
-    # 
-    # ax4 = plt.subplot(2,2,4)
-    # ax4.get_xaxis().set_visible(False)
-    # ax4.get_yaxis().set_visible(False)
-    # ota_mean, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_i[errcut], statistic='mean', bins=[3,3])
-    # ota_median, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_i[errcut], statistic='median', bins=[3,3])
-    # ota_count, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_i[errcut], statistic='count', bins=[3,3])
-    # ota_std, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_i[errcut], statistic=np.std, bins=[3,3])
-    # 
-    # for j in range(3):
-    #     for k in range(3):
-    #         plt.text(ota_x[j]+300, ota_y[k]+3100, 'mean = {0:5.2f}'.format(ota_mean[j,k]), fontsize=6)
-    #         plt.text(ota_x[j]+300, ota_y[k]+2400, 'median = {0:5.2f}'.format(ota_median[j,k]), fontsize=6)
-    #         plt.text(ota_x[j]+300, ota_y[k]+1700, 'ota - global = {0:5.2f}'.format(ota_median[j,k]-np.median(star_zp_i[errcut])), fontsize=6)
-    #         plt.text(ota_x[j]+300, ota_y[k]+1000, 'std = {0:5.2f}'.format(ota_std[j,k]), fontsize=6)
-    #         plt.text(ota_x[j]+300, ota_y[k]+300,  'N = {0:5d}'.format(int(ota_count[j,k])), fontsize=6)
-    # 
-    # plt.hlines(ota_y[1:3],0,11000,linestyles='dashed')
-    # plt.vlines(ota_x[1:3],0,11000,linestyles='dashed')
-    # plt.xlim(0,11000)
-    # plt.ylim(0,11000)
-    # # plt.tight_layout()
-    # 
-    # 
-    # plt.savefig(img_root+'_photmap_js.pdf')
-    # hdulist1.close()
-    # hdulist2.close()
+    plt.clf()
+    hdulist1 = ast.io.fits.open(img1)
+    hdulist2 = ast.io.fits.open(img2)
+    xmax = hdulist1[0].header['naxis1']
+    ymax = hdulist1[0].header['naxis2']
+    ax1 = plt.subplot(2,2,1, projection=ast.wcs.WCS(hdulist1[0].header))
+    # plt.imshow(hdulist[0].data, origin='lower', cmap='Greys_r', vmin=500., vmax=2000.)
+    plt.scatter(gXPOS[errcut], gYPOS[errcut], c=(star_zp_g[errcut]-np.median(star_zp_g[errcut])), edgecolor='none', alpha=1.0, cmap=cm.rainbow)
     
-    return eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i, gXAIRMASS, iXAIRMASS
+    plt.xlabel('ra (SDSS $g$)')
+    plt.ylabel('dec')
+    plt.xlim(0,xmax)
+    plt.ylim(0,ymax)
+    cb = plt.colorbar()
+    sig = np.std(star_zp_g[errcut])
+    cb.set_label('diff.from median ZP ({0:5.2f})'.format(np.median(star_zp_g[errcut])))
+    # cb.set_ticks([-7.0*sig,-6.0*sig,-5.0*sig,-4.0*sig,-3.0*sig,-2.0*sig,-1.0*sig,0.0,sig,2.0*sig,3.0*sig,4.0*sig,5.0*sig,6.0*sig,7.0*sig,8.0*sig])
+    # cb.set_ticklabels(['{0:5.2f}'.format(-7.0*sig),'{0:5.2f}'.format(-6.0*sig),'{0:5.2f}'.format(-5.0*sig),'{0:5.2f}'.format(-4.0*sig),'{0:5.2f}'.format(-3.0*sig),'{0:5.2f}'.format(-2.0*sig),'{0:5.2f}'.format(-1.0*sig),'{0:5.2f}'.format(0.0),'{0:5.2f}'.format(sig), '{0:5.2f}'.format(2.0*sig), '{0:5.2f}'.format(3.0*sig), '{0:5.2f}'.format(4.0*sig), '{0:5.2f}'.format(5.0*sig), '{0:5.2f}'.format(6.0*sig), '{0:5.2f}'.format(7.0*sig), '{0:5.2f}'.format(8.0*sig)])
+    
+    ax2 = plt.subplot(2,2,2)
+    ax2.get_xaxis().set_visible(False)
+    ax2.get_yaxis().set_visible(False)
+    ota_mean, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_g[errcut], statistic='mean', bins=[3,3])
+    ota_median, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_g[errcut], statistic='median', bins=[3,3])
+    ota_count, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_g[errcut], statistic='count', bins=[3,3])
+    ota_std, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_g[errcut], statistic=np.std, bins=[3,3])
+    print ota_mean, ota_median, ota_count, ota_std
+    
+    for j in range(3):
+        for k in range(3):
+            plt.text(ota_x[j]+300, ota_y[k]+3100, 'mean = {0:5.2f}'.format(ota_mean[j,k]), fontsize=6)
+            plt.text(ota_x[j]+300, ota_y[k]+2400, 'median = {0:5.2f}'.format(ota_median[j,k]), fontsize=6)
+            plt.text(ota_x[j]+300, ota_y[k]+1700, 'ota - global = {0:5.2f}'.format(ota_median[j,k]-np.median(star_zp_g[errcut])), fontsize=6)
+            plt.text(ota_x[j]+300, ota_y[k]+1000, 'std = {0:5.2f}'.format(ota_std[j,k]), fontsize=6)
+            plt.text(ota_x[j]+300, ota_y[k]+300,  'N = {0:5d}'.format(int(ota_count[j,k])), fontsize=6)
+    
+    plt.hlines(ota_y[1:3],0,xmax,linestyles='dashed')
+    plt.vlines(ota_x[1:3],0,ymax,linestyles='dashed')
+    plt.xlim(0,xmax)
+    plt.ylim(0,ymax)
+    
+    ax3 = plt.subplot(2,2,3, projection=ast.wcs.WCS(hdulist2[0].header))
+    # plt.imshow(hdulist[0].data, origin='lower', cmap='Greys_r', vmin=500., vmax=2000.)
+    plt.scatter(gXPOS[errcut], gYPOS[errcut], c=(star_zp_i[errcut]-np.median(star_zp_i[errcut])), edgecolor='none', alpha=1.0, cmap=cm.rainbow)
+    
+    plt.xlabel('ra (SDSS $i$)')
+    plt.ylabel('dec')
+    plt.xlim(0,xmax)
+    plt.ylim(0,ymax)
+    cb = plt.colorbar()
+    sig = np.std(star_zp_i[errcut])
+    cb.set_label('diff.from median ZP ({0:5.2f})'.format(np.median(star_zp_i[errcut])))
+    # cb.set_ticks([-1.0*sig,0.0,sig,2.0*sig,3.0*sig,4.0*sig,5.0*sig,6.0*sig,7.0*sig,8.0*sig])
+    # cb.set_ticklabels(['{0:5.2f}'.format(-1.0*sig),'{0:5.2f}'.format(0.0),'{0:5.2f}'.format(sig), '{0:5.2f}'.format(2.0*sig), '{0:5.2f}'.format(3.0*sig), '{0:5.2f}'.format(4.0*sig), '{0:5.2f}'.format(5.0*sig), '{0:5.2f}'.format(6.0*sig), '{0:5.2f}'.format(7.0*sig), '{0:5.2f}'.format(8.0*sig)])
+    
+    ax4 = plt.subplot(2,2,4)
+    ax4.get_xaxis().set_visible(False)
+    ax4.get_yaxis().set_visible(False)
+    ota_mean, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_i[errcut], statistic='mean', bins=[3,3])
+    ota_median, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_i[errcut], statistic='median', bins=[3,3])
+    ota_count, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_i[errcut], statistic='count', bins=[3,3])
+    ota_std, ota_x, ota_y, ota_id = stats.binned_statistic_2d(gXPOS[errcut], gYPOS[errcut], star_zp_i[errcut], statistic=np.std, bins=[3,3])
+    
+    for j in range(3):
+        for k in range(3):
+            plt.text(ota_x[j]+300, ota_y[k]+3100, 'mean = {0:5.2f}'.format(ota_mean[j,k]), fontsize=6)
+            plt.text(ota_x[j]+300, ota_y[k]+2400, 'median = {0:5.2f}'.format(ota_median[j,k]), fontsize=6)
+            plt.text(ota_x[j]+300, ota_y[k]+1700, 'ota - global = {0:5.2f}'.format(ota_median[j,k]-np.median(star_zp_i[errcut])), fontsize=6)
+            plt.text(ota_x[j]+300, ota_y[k]+1000, 'std = {0:5.2f}'.format(ota_std[j,k]), fontsize=6)
+            plt.text(ota_x[j]+300, ota_y[k]+300,  'N = {0:5d}'.format(int(ota_count[j,k])), fontsize=6)
+    
+    plt.hlines(ota_y[1:3],0,xmax,linestyles='dashed')
+    plt.vlines(ota_x[1:3],0,ymax,linestyles='dashed')
+    plt.xlim(0,xmax)
+    plt.ylim(0,ymax)
+    # plt.tight_layout()
+    
+    
+    plt.savefig(img_root+'_photmap_js.pdf')
+    hdulist1.close()
+    hdulist2.close()
+    
+    return eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i
 
 if __name__ == '__main__':
     # ask user input on which files to run on
@@ -1081,15 +1093,12 @@ if __name__ == '__main__':
     # else:
     path = os.getcwd()
     steps = path.split('/')
-    folder = steps[-1].upper()
+    folder = steps[-1].lower()
     
-    g_img = folder+'_g_sh.fits'
-    # print ''
-    # # if not os.path.isfile('m13-se.r.phot.1'):
-    # #     i_img = raw_input("Enter the r or i image file name (don't worry, I know what to do): \n")
-    # # else:
-    i_img = folder+'_i_sh.fits'
+    g_img = folder+'_g.fits'
+    i_img = folder+'_i.fits'
+    
     # print '--------------------------------------------------------------------------'
-    # if not os.path.isfile(g_img[:-5]+'.sdssxy'):        
+    # if not os.path.isfile(g_img.nofits()+'.sdssxy'):        
     download_sdss(g_img, i_img)
-    calibrate(img1=g_img, img2=i_img)
+    js_calibrate(img1=g_img, img2=i_img)

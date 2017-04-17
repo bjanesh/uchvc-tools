@@ -36,9 +36,9 @@ if not unpacked :
     call(funpack_cmd, shell=True)
 
 for file_ in os.listdir("./"):
-    if file_.endswith("i.fits"):
+    if file_.endswith("i_match.fits"):
         fits_file_i = file_
-    if file_.endswith("g.fits"):
+    if file_.endswith("g_match.fits"):
         fits_file_g = file_
 
 path = os.getcwd()
@@ -78,6 +78,13 @@ if not os.path.isfile(title_string+'.imsets') :
 kg = 0.200
 ki = 0.058
 
+# make sure there's a help file first
+if not os.path.isfile(title_string+'_help.txt'):
+    from uchvc_cal import download_sdss, calibrate
+    download_sdss(fits_g, fits_i)
+    meh = calibrate(img1=fits_g, img2=fits_i)
+
+
 # get the photometric calibration coefficients from Steven's help file <--
 # or from the image header/fits table/ whatever
 photcalFile = open(title_string+'_help.txt')
@@ -93,6 +100,10 @@ ami = float(photcalLines[26].split()[5])
 photcalFile.close()
 
 print mu_gi, zp_gi, eps_gi, zp_i, amg, ami
+
+# delete the pipeline WCS keywords from the header, Steven's are better
+iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
+iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no')
 
 fits_h_i = fits.open(fits_i)
 fits_h_g = fits.open(fits_g)
@@ -646,7 +657,7 @@ txdump_out.close()
 
 call('sort -g phot_sources.txdump > temp', shell=True)
 call('mv temp phot_sources.txdump', shell=True)
-call('awk -f ~/uchvc-tools/make_calibdat phot_sources.txdump > calibration.dat', shell=True)
+call('awk -f ~/projects/uchvc-tools/make_calibdat phot_sources.txdump > calibration.dat', shell=True)
 
 nid,gx,gy,g_i,g_ierr,ix,iy,i_i,i_ierr = np.loadtxt('calibration.dat',usecols=(0,1,2,4,5,11,12,14,15),unpack=True)
 
@@ -668,7 +679,7 @@ g0 = g_i - (kg*amg) + apcor_g
 i0 = i_i - (ki*ami) + apcor_i
 
 download_sdss(fits_g, fits_i, gmaglim = 22.0)
-eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i, gXAIRMASS, iXAIRMASS = js_calibrate(img1 = fits_g, img2 = fits_i)
+eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = fits_g, img2 = fits_i)
 
 # use the instrumental magnitude and initial color guess to ITERATE 
 # until you reach a converged calibrated magnitude/color
@@ -734,8 +745,4 @@ plt.xlabel('$(g-i)$')
 plt.ylim(27,15)
 plt.xlim(-1,4)
 plt.savefig(title_string+"_CMD.pdf")
-
-# delete the pipeline WCS keywords from the header, Steven's are better
-iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
-iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no')
 
