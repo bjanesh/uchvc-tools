@@ -8,7 +8,7 @@ from matplotlib.path import Path
 from matplotlib import cm
 from astropy import wcs
 from astropy.io import fits
-from pyraf import iraf
+# from pyraf import iraf
 import scipy.stats as ss
 from photutils import detect_sources, source_properties, properties_table
 from photutils.utils import random_cmap
@@ -17,6 +17,37 @@ try :
 except ImportError :
     print 'bad import'
     
+def getHIcentroid(object):
+    from astropy import units as u
+    from astropy.coordinates import SkyCoord
+    uchvcdb = os.environ['HOME']+'/projects/uchvc-db/predblist.sort.csv'
+    name, coords = np.loadtxt(uchvcdb, usecols=(1,2), dtype=str, delimiter=',', unpack=True)
+    # find the right row
+    coord = [this for i,this in enumerate(coords) if object in name[i]][0]
+
+    # parse the coordinate into a better string
+    rah = coord[0:2]
+    ram = coord[2:4]
+    ras = coord[4:8]
+    ded = coord[8:11]
+    dem = coord[11:13]
+    des = coord[13:15]
+
+    ra = rah+':'+ram+':'+ras
+    dec = ded+':'+dem+':'+des
+    coord_hi = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
+    ra_hi = coord_hi.ra
+    dec_hi = coord_hi.dec
+    return ra_hi, dec_hi
+    
+def dist2HIcentroid(ra, dec, ra_hi, dec_hi):
+    from astropy import units as u
+    from astropy.coordinates import SkyCoord
+    c_hi = SkyCoord(ra = ra_hi, dec = dec_hi, unit=(u.hourangle, u.deg))
+    c_peak = SkyCoord(ra = ra, dec = dec, unit=(u.hourangle, u.deg))
+    sep = c_hi.separation(c_peak)
+    return sep.arcsecond
+
 def deg2HMS(ra='', dec='', round=False):
     RA, DEC, rs, ds = '', '', '', ''
     if dec:
@@ -173,7 +204,7 @@ def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
     pct = 100.0*lognorm.cdf(dists, al, loc=loc, scale=beta)
     # print 'Significance of detection:','{0:6.3f}%'.format(pct)
 
-    if samples > 10000 and pct > 90.:
+    if samples > 10000 and pct > 95.:
         plt.clf()
         plt.figure(figsize=(9,4))
         plt.plot(x, lognorm.pdf(x, al, loc=loc, scale=beta),'r-', lw=2, alpha=0.6, label='lognormal distribution')
@@ -365,7 +396,7 @@ def main(argv):
         f1.close()
     
     if dm2 and filter_string != 'none':
-        dms = np.arange(dm,dm2,0.01)
+        dms = np.arange(dm,dm2,0.02)
     else:
         dms = [dm]
 
@@ -400,7 +431,7 @@ def main(argv):
         
         xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm, width, height)
         pct = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm)
-        if pct > 90 :
+        if pct > 95 :
             pct = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm, samples=25000)
         
         # make a circle to highlight a certain region
@@ -508,20 +539,22 @@ def main(argv):
         ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=False)
         # print 'Peak RA:',ra_c_d,':: Peak Dec:',dec_c_d
         
-        hi_c_ra, hi_c_dec = 142.5104167, 16.6355556
-        hi_c_x, hi_c_y = abs((hi_c_ra-ra_c)*60), abs((hi_c_dec-dec_c)*60)
+        hi_c_ra, hi_c_dec = getHIcentroid(title_string)
+        hi_c_x, hi_c_y = abs((hi_c_ra.degree-ra_c)*60), abs((hi_c_dec.degree-dec_c)*60)
         hi_x_circ = [hi_c_x + pltsig*cosd(t) for t in range(0,359,1)]
         hi_y_circ = [hi_c_y + pltsig*sind(t) for t in range(0,359,1)]
         
-        hi_pix_x,hi_pix_y = w.wcs_world2pix(hi_c_ra,hi_c_dec,1)
+        hi_pix_x,hi_pix_y = w.wcs_world2pix(hi_c_ra.degree,hi_c_dec.degree,1)
+        
+        sep = dist2HIcentroid(ra_c_d, dec_c_d, hi_c_ra, hi_c_dec)
         # print hi_pix_x, hi_pix_y
         
-        print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α ={:s}, δ ={:s} | N = {:4d} | σ = {:6.3f} | β = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, n_in_filter, S[x_cent_S][y_cent_S], pct)
-        print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:4d} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, n_in_filter, S[x_cent_S][y_cent_S], pct)        
+        print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | β = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)
+        print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)        
 
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
         #iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no') 
-        if pct > 90.:
+        if pct > 95.:
             f1 = open(mark_file, 'w+')
             for i in range(len(i_x_f)) :
                 print >> f1, '{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(i_x_f[i],i_y_f[i],i_rad_f[i],i_decd_f[i],i_mag_f[i],g_mag_f[i],gmi_f[i])
@@ -621,7 +654,7 @@ def main(argv):
             plt.xlabel('$(g-i)_0$')
             plt.ylim(25,15)
             plt.xlim(-1,4)
-            plt.title('m-M = ' + repr(dm) + ' (' + '{0:4.2f}'.format(mpc) +  ' Mpc)')
+            plt.title('m-M = ' + '{:5.2f}'.format(dm) + ' (' + '{0:4.2f}'.format(mpc) +  ' Mpc)')
             ax1.set_aspect(0.5)
         
             ax2 = plt.subplot(2,2,3)
@@ -677,6 +710,7 @@ def main(argv):
             # print 'detection at dm='+repr(dm)+' not significant enough to look at plots'
     search.close()    
     if imexam_flag :
+        from pyraf import iraf
         iraf.unlearn(iraf.tv.imexamine, iraf.rimexam)
         iraf.tv.rimexam.setParam('radius',int(fwhm_i))
         iraf.tv.rimexam.setParam('rplot',12.)
