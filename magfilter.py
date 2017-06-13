@@ -22,9 +22,10 @@ def getHIcentroid(object):
     from astropy.coordinates import SkyCoord
     uchvcdb = os.environ['HOME']+'/projects/uchvc-db/predblist.sort.csv'
     name, coords = np.loadtxt(uchvcdb, usecols=(1,2), dtype=str, delimiter=',', unpack=True)
+    print object
     # find the right row
-    coord = [this for i,this in enumerate(coords) if object in name[i]][0]
-
+    coord = [this for i,this in enumerate(coords) if object.upper() in name[i]][0]
+    
     # parse the coordinate into a better string
     rah = coord[0:2]
     ram = coord[2:4]
@@ -36,16 +37,17 @@ def getHIcentroid(object):
     ra = rah+':'+ram+':'+ras
     dec = ded+':'+dem+':'+des
     coord_hi = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
-    ra_hi = coord_hi.ra
-    dec_hi = coord_hi.dec
+    ra_hi = coord_hi.ra.deg
+    dec_hi = coord_hi.dec.deg
     return ra_hi, dec_hi
     
 def dist2HIcentroid(ra, dec, ra_hi, dec_hi):
     from astropy import units as u
     from astropy.coordinates import SkyCoord
-    c_hi = SkyCoord(ra = ra_hi, dec = dec_hi, unit=(u.hourangle, u.deg))
+    c_hi = SkyCoord(ra = ra_hi, dec = dec_hi, unit=(u.deg, u.deg))
     c_peak = SkyCoord(ra = ra, dec = dec, unit=(u.hourangle, u.deg))
     sep = c_hi.separation(c_peak)
+    # print c_hi, c_peak, sep.arcsecond
     return sep.arcsecond
 
 def deg2HMS(ra='', dec='', round=False):
@@ -407,9 +409,10 @@ def main(argv):
         dm_string = '{:5.2f}'.format(dm).replace('.','_')
         
         out_file = filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.pdf'
-        mark_file = 'f_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.dat'
+        mark_file = 'f_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
         circ_file = 'c_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
         fcirc_file = 'fc_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+        ds9_file = 'circles_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
         
         cm_filter, gi_iso, i_m_iso = make_filter(dm, filter_file)
         stars_f = filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1)
@@ -532,6 +535,12 @@ def main(argv):
         # for i in range(len(i_x_fc)) :
         #     print (i_x_fc[i],i_y_fc[i])
         
+        rcirc_c_x = ra_corner-(rCentx/60.)
+        rcirc_c_y = (rCenty/60.)+dec_corner
+        rcirc_pix_x, rcirc_pix_y = w.wcs_world2pix(rcirc_c_x,rcirc_c_y,1)
+        ra_cr, dec_cr = w.all_pix2world(rcirc_pix_x, rcirc_pix_y,1)
+        ra_cr_d,dec_cr_d = deg2HMS(ra=ra_cr, dec=dec_cr, round=False)
+        
         circ_c_x = ra_corner-(yedges[y_cent]/60.)
         circ_c_y = (xedges[x_cent]/60.)+dec_corner
         circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
@@ -540,14 +549,17 @@ def main(argv):
         # print 'Peak RA:',ra_c_d,':: Peak Dec:',dec_c_d
         
         hi_c_ra, hi_c_dec = getHIcentroid(title_string)
-        hi_c_x, hi_c_y = abs((hi_c_ra.degree-ra_c)*60), abs((hi_c_dec.degree-dec_c)*60)
+        hi_c_x, hi_c_y = abs((hi_c_ra-ra_corner)*60), abs((hi_c_dec-dec_corner)*60)
         hi_x_circ = [hi_c_x + pltsig*cosd(t) for t in range(0,359,1)]
         hi_y_circ = [hi_c_y + pltsig*sind(t) for t in range(0,359,1)]
         
-        hi_pix_x,hi_pix_y = w.wcs_world2pix(hi_c_ra.degree,hi_c_dec.degree,1)
+        hi_pix_x,hi_pix_y = w.wcs_world2pix(hi_c_ra,hi_c_dec,1)
         
         sep = dist2HIcentroid(ra_c_d, dec_c_d, hi_c_ra, hi_c_dec)
         # print hi_pix_x, hi_pix_y
+        # print ra_cr, dec_cr
+        # print ra_c, dec_c
+        # print hi_c_ra, hi_c_dec
         
         print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | β = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)
         print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)        
@@ -555,6 +567,11 @@ def main(argv):
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
         #iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no') 
         if pct > 95.:
+            with open(ds9_file,'w+') as ds9:
+                print >> ds9, "fk5;circle({:s},{:s},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr)
+                print >> ds9, "fk5;circle({:s},{:s},2') # color=magenta width=2 label=detection".format(ra_c, dec_c)
+                print >> ds9, "fk5;circle({:f},{:f},0.5') # color=black width=2 label=HI".format(hi_c_ra, hi_c_dec)
+                
             f1 = open(mark_file, 'w+')
             for i in range(len(i_x_f)) :
                 print >> f1, '{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(i_x_f[i],i_y_f[i],i_rad_f[i],i_decd_f[i],i_mag_f[i],g_mag_f[i],gmi_f[i])
@@ -624,6 +641,7 @@ def main(argv):
             plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
             # plt.scatter(i_ra_c, i_dec_c,  color='red', marker='o', s=3, edgecolors='none')
             plt.scatter(i_ra_f, i_dec_f,  c=gmi_f, marker='o', s=(30-np.array(i_mag_f)), edgecolors='none', cmap=cm.rainbow)
+            plt.clim(0,2)
             plt.colorbar()
             plt.ylabel('Dec (arcmin)')
             plt.xlim(0,max(i_ra))
@@ -671,7 +689,7 @@ def main(argv):
             # ax3.pcolormesh(X,Y,grid_gaus)
             plt.xlabel('RA (arcmin)')
             plt.ylabel('Dec (arcmin)')
-        
+            plt.title('smoothed star map')
             # plt.ylabel('Dec (arcmin)')
             plt.xlim(0,max(i_ra))
             plt.ylim(0,max(i_dec))
@@ -683,7 +701,7 @@ def main(argv):
             plt.scatter(gmi_fc, i_mag_fc,  color='red', marker='o', s=3, edgecolors='none')    
             plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='off')
             ax0.yaxis.set_label_position('left')
-            plt.text(0,17,'in circle')
+            plt.title('in detection circle')
             plt.xlabel('$(g-i)_0$')
             plt.ylabel('$i_0$')
             plt.ylim(25,15)
@@ -694,7 +712,7 @@ def main(argv):
             plt.scatter(gmi_cr, i_mag_cr,  color='black', marker='o', s=3, edgecolors='none')
             plt.scatter(gmi_fcr, i_mag_fcr,  color='red', marker='o', s=3, edgecolors='none')    
             plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='on')
-            plt.text(0,17,'in reference \ncircle')
+            plt.title('in ref. circle')
             ax0.yaxis.set_label_position('left')
             plt.xlabel('$(g-i)_0$')
             plt.ylim(25,15)
