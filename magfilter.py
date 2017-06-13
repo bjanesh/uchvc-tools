@@ -294,7 +294,7 @@ def main(argv):
     mag_file = 'calibrated_mags.dat'
 
     # read in magnitudes, colors, and positions(x,y)
-    gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
+    gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
     # print len(gxr), "total stars"
     
     # filter out the things with crappy color errors
@@ -311,6 +311,7 @@ def main(argv):
     i_mag = [i_magr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
     i_ierr = np.array([i_ierrr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))])
     gmi = [gmir[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    fwhm_s = [fwhm_sr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
     gmi_err = np.array([np.sqrt(g_ierrr[i]**2 + i_ierrr[i]**2) for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))])
     
     i_ierrAVG, bedges, binid = ss.binned_statistic(i_mag,i_ierr,statistic='median',bins=10,range=[15,25])
@@ -430,6 +431,7 @@ def main(argv):
         i_decd_f = [i_decd[i] for i in range(len(i_mag)) if (stars_f[i])]
         i_x_f = [ix[i] for i in range(len(i_mag)) if (stars_f[i])]
         i_y_f = [iy[i] for i in range(len(i_mag)) if (stars_f[i])]
+        fwhm_sf = [fwhm_s[i] for i in range(len(i_mag)) if (stars_f[i])]
         n_in_filter = len(i_mag_f)
         
         xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm, width, height)
@@ -456,6 +458,7 @@ def main(argv):
         i_decd_c = [i_decd[i] for i in range(len(i_mag)) if (stars_circ[i])]
         i_x_c = [ix[i] for i in range(len(i_mag)) if (stars_circ[i])]
         i_y_c = [iy[i] for i in range(len(i_mag)) if (stars_circ[i])]
+        fwhm_sc = [fwhm_s[i] for i in range(len(i_mag)) if (stars_circ[i])]
         
         # make a random reference cmd to compare to
         if not os.path.isfile('refCircle.center'):
@@ -482,6 +485,7 @@ def main(argv):
         i_decd_cr = [i_decd[i] for i in range(len(i_mag)) if (stars_circr[i])]
         i_x_cr = [ix[i] for i in range(len(i_mag)) if (stars_circr[i])]
         i_y_cr = [iy[i] for i in range(len(i_mag)) if (stars_circr[i])]
+        fwhm_scr = [fwhm_s[i] for i in range(len(i_mag)) if (stars_circr[i])]
         
         i_mag_fc = [i_mag[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
         i_ierr_fc = [i_ierr[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
@@ -494,6 +498,7 @@ def main(argv):
         i_decd_fc = [i_decd[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
         i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
         i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        fwhm_sfc = [fwhm_s[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
         
         # print len(i_mag_fc), 'filter stars in circle'
         
@@ -527,7 +532,7 @@ def main(argv):
         i_decd_fcr = [i_decd[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
         i_x_fcr = [ix[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
         i_y_fcr = [iy[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
-        
+        fwhm_sfcr = [fwhm_s[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
         # print len(i_mag_fcr), 'filter stars in ref. circle'
         
         # 
@@ -574,17 +579,17 @@ def main(argv):
                 
             f1 = open(mark_file, 'w+')
             for i in range(len(i_x_f)) :
-                print >> f1, '{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(i_x_f[i],i_y_f[i],i_rad_f[i],i_decd_f[i],i_mag_f[i],g_mag_f[i],gmi_f[i])
+                print >> f1, '{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f} {7:7.3f}'.format(i_x_f[i],i_y_f[i],i_rad_f[i],i_decd_f[i],i_mag_f[i],g_mag_f[i],gmi_f[i],fwhm_sf[i])
             f1.close()
             
             f2 = open(circ_file, 'w+')
             for i in range(len(i_x_c)) :
-                print >> f2, '{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(i_x_c[i],i_y_c[i],i_rad_c[i],i_decd_c[i],i_mag_c[i],i_mag_c[i]+gmi_c[i],gmi_c[i])
+                print >> f2, '{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f} {7:7.3f}'.format(i_x_c[i],i_y_c[i],i_rad_c[i],i_decd_c[i],i_mag_c[i],i_mag_c[i]+gmi_c[i],gmi_c[i],fwhm_sc[i])
             f2.close()
             
             with open(fcirc_file,'w+') as f3:
                 for i,x in enumerate(i_x_fc):
-                    print >> f3, i_x_fc[i], i_y_fc[i]
+                    print >> f3, i_x_fc[i], i_y_fc[i], fwhm_sfc[i]
             
             # center_file = 'im_cens_'+dm_string+'_'+fwhm_string+'.dat'
             # im_cens = open(center_file,'w+')

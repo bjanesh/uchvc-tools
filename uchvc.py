@@ -43,7 +43,7 @@ for file_ in os.listdir("./"):
 
 path = os.getcwd()
 steps = path.split('/')
-title_string = steps[-1]        # which should always exist in the directory
+title_string = steps[-1].upper()        # which should always exist in the directory
         
 # copy the good region (no cell gaps) to a new file        
 fits_g = title_string+'_g.fits'
@@ -650,7 +650,7 @@ print 'Reddening correction :: g = {0:7.4f} : i = {1:7.4f}'.format(cal_A_g,cal_A
 # 
 # print 'gi color term :: eps = {0:7.4f}'.format(cal_color_g)
 # print 'gi color term err :: eps = {0:7.4f}'.format(cal_color_ge)
-
+print title_string
 txdump_out = open('phot_sources.txdump','w+')
 iraf.ptools.txdump(textfiles=title_string+'_sources_*.mag.1', fields="id,mag,merr,msky,stdev,rapert,xcen,ycen,ifilter,xairmass,image", expr='yes', headers='no', Stdout=txdump_out)
 txdump_out.close()
@@ -732,10 +732,10 @@ w = wcs.WCS(fits_h_i[0].header)
 # The second argument is "origin" -- in this case we're declaring we
 # have 1-based (Fortran-like) coordinates.
 world = w.all_pix2world(pixcrd, 1)
-
+print len(ix), len(escut_i)
 f3 = open('calibrated_mags.dat', 'w+')
 for i in range(len(ix)) :
-    print >> f3, '{0:8.2f} {1:8.2f} {2:12.3f} {3:12.3f} {4:8.2f} {5:8.2f} {6:12.3f} {7:12.3f} {8:12.3f} {9:12.8f} {10:12.8f}'.format(gx[i],gy[i],g_mag[i],g_ierr[i],ix[i],iy[i],i_mag[i],i_ierr[i],gmi[i], world[i,0],world[i,1])
+    print >> f3, '{0:8.2f} {1:8.2f} {2:12.3f} {3:12.3f} {4:8.2f} {5:8.2f} {6:12.3f} {7:12.3f} {8:12.3f} {9:12.8f} {10:12.8f} {11:7.3f}'.format(gx[i],gy[i],g_mag[i],g_ierr[i],ix[i],iy[i],i_mag[i],i_ierr[i],gmi[i], world[i,0],world[i,1],escut_i[i])
 f3.close()
 
 plt.clf()

@@ -200,6 +200,7 @@ def escut(image, pos_file, fwhm, peak):
     print np.median(fwhmCut[fwhmchk2]), np.std(fwhmCut[fwhmchk2])
     fwchk = np.where(np.abs(fwhmCut-np.median(fwhmCut[fwhmchk2])) > 10.0*np.std(fwhmCut[fwhmchk2]))
     drop = np.abs(fwhmCut-np.median(fwhmCut[fwhmchk2])) > 10.0*np.std(fwhmCut[fwhmchk2])
+    keep = np.abs(fwhmCut-np.median(fwhmCut[fwhmchk2])) <= 10.0*np.std(fwhmCut[fwhmchk2])
 
     
     with open('escutVBAD_i.pos','w+') as f:
@@ -237,7 +238,7 @@ def escut(image, pos_file, fwhm, peak):
     plt.savefig('fwhmcheck.pdf')
     
     
-    return True
+    return fwhmCut[keep]
 
 # image = "AGC174540_i_sh.fits"
 # escut(image, )
