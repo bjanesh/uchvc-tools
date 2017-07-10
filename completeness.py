@@ -6,17 +6,20 @@ from pyraf import iraf
 import glob
 
 #######################
-objname = 'AGC249525'
+objname = 'AGC238626'
 filter_ = 'i'   ####### change me!
 max_mag = -4.0
 step = 0.1
 nartstars = 100
-fwhm = 6.323
-sigma = 8.5
-threshold = 3.5
+fwhm = 5.671
+sigma = 7.445809
+threshold = 3.0
 #######################
-img = objname+'_'+filter_+'_sh_crop.fits'
-psf_img = objname+'_'+filter_+'_sh_crop.psf.1.fits'
+img = objname+'_'+filter_+'_crop.fits'
+psf_img = objname+'_'+filter_+'.fits.psf.1.fits'
+
+# make the cropped image
+iraf.imcopy(objname+'_'+filter_+'.fits[4500:6500,4500:6500]', img)
 
 iraf.daophot(_doprint=0)
 iraf.ptools(_doprint=0)
@@ -32,21 +35,21 @@ iraf.findpars.threshold=threshold
 if os.path.isfile('mask.reg'):
     m3,m4,m5,m6 = np.loadtxt('mask.reg',usecols=(2,3,4,5),unpack=True)
 
-inst_mags = np.arange(max_mag, 0.5, step)
+inst_mags = np.arange(max_mag, 1.0, step)
 
 cTable = open('ctable_'+filter_+'.out','w+')
 print >> cTable, "# Inst mag bin    % Complete"
 print >> cTable, "#   "
 
 for mag in inst_mags:
-    art_img = objname+'_'+filter_+'_sh_crop_add.'+'{:5.3f}'.format(mag)+'.fits'
-    dao_coo = objname+'_'+filter_+'_sh_crop_add.'+'{:5.3f}'.format(mag)+'.coo.1'
-    phot_out = objname+'_'+filter_+'_sh_crop_add.'+'{:5.3f}'.format(mag)+'.mag.1'
-    art_coo = objname+'_'+filter_+'_sh_crop_add.'+'{:5.3f}'.format(mag)+'.fits.art'
-    art_tab = objname+'_'+filter_+'_sh_crop_add.'+'{:5.3f}'.format(mag)+'_art.tab'
-    phot_tab = objname+'_'+filter_+'_sh_crop_add.'+'{:5.3f}'.format(mag)+'_phot.tab'
-    match_tab = objname+'_'+filter_+'_sh_crop_add.'+'{:5.3f}'.format(mag)+'_tmatch.tab'
-    match_file = objname+'_'+filter_+'_sh_crop_add.'+'{:5.3f}'.format(mag)+'_tmatch.tdump'
+    art_img = objname+'_'+filter_+'_crop_add.'+'{:5.3f}'.format(mag)+'.fits'
+    dao_coo = objname+'_'+filter_+'_crop_add.'+'{:5.3f}'.format(mag)+'.coo.1'
+    phot_out = objname+'_'+filter_+'_crop_add.'+'{:5.3f}'.format(mag)+'.mag.1'
+    art_coo = objname+'_'+filter_+'_crop_add.'+'{:5.3f}'.format(mag)+'.fits.art'
+    art_tab = objname+'_'+filter_+'_crop_add.'+'{:5.3f}'.format(mag)+'_art.tab'
+    phot_tab = objname+'_'+filter_+'_crop_add.'+'{:5.3f}'.format(mag)+'_phot.tab'
+    match_tab = objname+'_'+filter_+'_crop_add.'+'{:5.3f}'.format(mag)+'_tmatch.tab'
+    match_file = objname+'_'+filter_+'_crop_add.'+'{:5.3f}'.format(mag)+'_tmatch.tdump'
     next_mag = mag + step
     
     print 'adding stars'
@@ -99,7 +102,7 @@ for mag in inst_mags:
     if not os.path.isfile(art_tab):
         print 'creating artificial star table from', art_coo+'.1a'
         iraf.tables.tcreate.setParam("nlines",0)
-        iraf.tables.tcreate(art_tab, "art_table.description", art_coo+'.1a')
+        iraf.tables.tcreate(art_tab, "/Users/wjanesh/projects/uchvc-tools/art_table.description", art_coo+'.1a')
     
 # for file_ in glob.glob('*.mag.1a'):
     print 'reformatting', phot_out
@@ -117,7 +120,7 @@ for mag in inst_mags:
     if not os.path.isfile(phot_tab):
         print 'creating phot table from', phot_out
         iraf.tables.tcreate.setParam("nlines",5)
-        iraf.tables.tcreate(phot_tab, "phot_table.description", phot_out)
+        iraf.tables.tcreate(phot_tab, "/Users/wjanesh/projects/uchvc-tools/phot_table.description", phot_out)
     
 # artFiles = glob.glob('*_art.tab')
 # photFiles = glob.glob('*_phot.tab')

@@ -1,0 +1,36 @@
+IMAGE ch*23
+XINIT r
+YINIT r
+ID i
+COORDS ch*20
+# I am commenting this field out, because in my phot output files,
+# the coords file always exceeds 23 characters and therefore runs
+# into the LID field.  So it's seen by tcreate as a single field.
+#LID i
+XCEN r
+YCEN r
+XSHIFT r
+YSHIFT r
+XERR r 
+YERR r
+CIERR i
+CERROR ch*9
+MSKY r
+STDEV r
+SSKEW r
+NSKY i
+NSREJ i
+SIERR i
+SERROR ch*9
+ITIME r
+XAIRMASS r
+IFILTER ch*9
+OTIME ch*23
+RAPERT r
+SUM r
+AREA r
+FLUX r
+MAG r
+MERR r
+PIERR i
+PERROR ch*9

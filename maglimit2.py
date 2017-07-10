@@ -2,7 +2,7 @@
 import os
 import numpy as np
 from pyraf import iraf
-from uchvc_cal import js_calibrate
+from uchvc_cal import download_sdss, js_calibrate
 
 iraf.images(_doprint=0)
 iraf.tv(_doprint=0)
@@ -13,11 +13,15 @@ iraf.photcal(_doprint=0)
 iraf.apphot(_doprint=0)  
 iraf.imutil(_doprint=0)
 
+title_string = 'AGC258237'
+dm = 24.02
+m_hi = 10**5.50
+
+###
 epadu = 1.268899
-title_string = 'AGC249525'
 coords_file = 'region_coords.dat'
 
-if not os.path.isfile(title_string+'_i_sh_masked.fits'):
+if not os.path.isfile(title_string+'_i_masked.fits'):
 
 #   ix,iy,imag = np.loadtxt('calibrated_mags.dat',usecols=(4,5,6),unpack=True)
 #     with open('bright_stars.dat','w+') as f1:
@@ -25,7 +29,7 @@ if not os.path.isfile(title_string+'_i_sh_masked.fits'):
 #             if imag[i] < 18.0 :
 #                 print >> f1, ix[i], iy[i], imag[i]
 
-    # iraf.tv.display(image=title_string+'_i_sh.fits', frame=1)
+    # iraf.tv.display(image=title_string+'_i.fits', frame=1)
     #
     # iraf.unlearn(iraf.tv.tvmark)
     # iraf.tv.tvmark.setParam('label',"no")
@@ -37,7 +41,7 @@ if not os.path.isfile(title_string+'_i_sh_masked.fits'):
         print 'Mask out bright stars indicated and other obvious things and save as regions.txt'
         raw_input("Press Enter when finished:")
 
-    iraf.images.imcopy(title_string+'_i_sh.fits',title_string+'_i_sh_masked.fits',verbose="yes")
+    iraf.images.imcopy(title_string+'_i.fits',title_string+'_i_masked.fits',verbose="yes")
 
     m3,m4,m5,m6 = np.loadtxt('regions.txt',usecols=(2,3,4,5),unpack=True)
     bgmean_i = 623.670898438
@@ -61,9 +65,9 @@ if not os.path.isfile(title_string+'_i_sh_masked.fits'):
         if (y2 > 11000):
             y2 = 11000
         iraf.unlearn(iraf.imreplace)
-        iraf.imutil.imreplace(images=title_string+"_i_sh_masked.fits["+repr(int(x1))+":"+repr(int(x2))+","+repr(int(y1))+":"+repr(int(y2))+"]", value=0.0)
+        iraf.imutil.imreplace(images=title_string+"_i_masked.fits["+repr(int(x1))+":"+repr(int(x2))+","+repr(int(y1))+":"+repr(int(y2))+"]", value=0.0)
 
-if not os.path.isfile(title_string+'_g_sh_masked.fits'):
+if not os.path.isfile(title_string+'_g_masked.fits'):
 
     ix,iy,imag = np.loadtxt('calibrated_mags.dat',usecols=(4,5,6),unpack=True)
     with open('bright_stars.dat','w+') as f1:
@@ -71,11 +75,11 @@ if not os.path.isfile(title_string+'_g_sh_masked.fits'):
             if imag[i] < 18.0 :
                 print >> f1, ix[i], iy[i], imag[i]
 
-    iraf.images.imcopy(title_string+'_g_sh.fits',title_string+'_g_sh_masked.fits',verbose="yes")
+    iraf.images.imcopy(title_string+'_g.fits',title_string+'_g_masked.fits',verbose="yes")
 
     m3,m4,m5,m6 = np.loadtxt('regions.txt',usecols=(2,3,4,5),unpack=True)
 
-    print "g sky value is:",np.mean(bgmean_g)
+    # print "g sky value is:",np.mean(bgmean_g)
 
     for i in range(len(m3)) :
         x1 = m3[i] - (m5[i]/2.)
@@ -92,10 +96,10 @@ if not os.path.isfile(title_string+'_g_sh_masked.fits'):
         if (y2 > 11000):
             y2 = 11000
         iraf.unlearn(iraf.imreplace)
-        iraf.imutil.imreplace(images=title_string+"_g_sh_masked.fits["+repr(int(x1))+":"+repr(int(x2))+","+repr(int(y1))+":"+repr(int(y2))+"]", value=0.0)
+        iraf.imutil.imreplace(images=title_string+"_g_masked.fits["+repr(int(x1))+":"+repr(int(x2))+","+repr(int(y1))+":"+repr(int(y2))+"]", value=0.0)
 
 if not os.path.isfile('ones_mask.fits'):
-    iraf.images.imarith(title_string+'_g_sh.fits', '*', 0.0, 'zeros.fits',verbose="yes")
+    iraf.images.imarith(title_string+'_g.fits', '*', 0.0, 'zeros.fits',verbose="yes")
     iraf.images.imarith('zeros.fits', '+', 1.0, 'ones_mask.fits',verbose="yes")
 
     m3,m4,m5,m6 = np.loadtxt('regions.txt',usecols=(2,3,4,5),unpack=True)
@@ -116,7 +120,7 @@ if not os.path.isfile('ones_mask.fits'):
             y2 = 11000
         iraf.unlearn(iraf.imreplace)
         iraf.imutil.imreplace(images="ones_mask.fits["+repr(int(x1))+":"+repr(int(x2))+","+repr(int(y1))+":"+repr(int(y2))+"]", value=0.0)
-# iraf.tv.display(image=title_string+'_i_sh_masked.fits', frame=1)
+# iraf.tv.display(image=title_string+'_i_masked.fits', frame=1)
 #
 # iraf.unlearn(iraf.tv.tvmark)
 # iraf.tv.tvmark.setParam('label',"no")
@@ -146,7 +150,7 @@ iraf.datapars.setParam('fwhmpsf',6.197)
 iraf.photpars.setParam('apertures','409,500,591,682,773,818') 
 iraf.fitskypars.setParam('annulus',450.)
 #
-iraf.apphot.phot(image=title_string+"_i_sh_masked.fits", coords=coords_file, output="mag_est_i.dat")
+iraf.apphot.phot(image=title_string+"_i_masked.fits", coords=coords_file, output="mag_est_i.dat")
 
 txdump_out = open('phot_region_i.txdump','w+')
 iraf.ptools.txdump(textfiles='mag_est_i.dat', fields="id,sum,msky,stdev,nsky", expr='yes', headers='no', Stdout=txdump_out)
@@ -154,7 +158,7 @@ txdump_out.close()
 
 iraf.datapars.setParam('fwhmpsf',6.197)
 
-iraf.apphot.phot(image=title_string+"_g_sh_masked.fits", coords=coords_file, output="mag_est_g.dat")
+iraf.apphot.phot(image=title_string+"_g_masked.fits", coords=coords_file, output="mag_est_g.dat")
 
 txdump_out = open('phot_region_g.txdump','w+')
 iraf.ptools.txdump(textfiles='mag_est_g.dat', fields="id,sum,msky,stdev,nsky", expr='yes', headers='no', Stdout=txdump_out)
@@ -195,9 +199,9 @@ for r in rs:
     iraf.photpars.setParam('apertures',7.) 
     iraf.fitskypars.setParam('annulus',10.)
     #
-    iraf.apphot.phot(image=title_string+"_g_sh.fits", coords=fcirc_file, output="mag_min_g.dat")
+    iraf.apphot.phot(image=title_string+"_g.fits", coords=fcirc_file, output="mag_min_g_{:2d}.dat".format(r))
     txdump_out = open('phot_indiv_g.txdump','w+')
-    iraf.ptools.txdump(textfiles='mag_min_g.dat', fields="id,mag,merr,flux,area,stdev,nsky", expr='yes', headers='no', Stdout=txdump_out)
+    iraf.ptools.txdump(textfiles="mag_min_g_{:2d}.dat".format(r), fields="id,mag,merr,flux,area,stdev,nsky", expr='yes', headers='no', Stdout=txdump_out)
     txdump_out.close()
 
     iraf.fitskypars.setParam('dannulus',10.)
@@ -205,9 +209,9 @@ for r in rs:
     iraf.photpars.setParam('apertures',7.) 
     iraf.fitskypars.setParam('annulus',10.)
     #
-    iraf.apphot.phot(image=title_string+"_i_sh.fits", coords=fcirc_file, output="mag_min_i.dat")
+    iraf.apphot.phot(image=title_string+"_i.fits", coords=fcirc_file, output="mag_min_i_{:2d}.dat".format(r))
     txdump_out = open('phot_indiv_i.txdump','w+')
-    iraf.ptools.txdump(textfiles='mag_min_i.dat', fields="id,mag,merr,flux,area,stdev,nsky", expr='yes', headers='no', Stdout=txdump_out)
+    iraf.ptools.txdump(textfiles="mag_min_i_{:2d}.dat".format(r), fields="id,mag,merr,flux,area,stdev,nsky", expr='yes', headers='no', Stdout=txdump_out)
     txdump_out.close()
 
     fluxes_i, areas_i, stdevs_i, nskys_i = np.loadtxt('phot_indiv_i.txdump',usecols=(3,4,5,6),unpack=True)
@@ -240,24 +244,73 @@ me_g = np.hstack((merr_g, merrs_g))
 # mags_g = -2.5*np.log10(flux_g)+2.5*np.log10(300.0)
 
 # print mags_i, mags_g
-
-eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = title_string+"_g_sh.fits", img2 = title_string+"_i_sh.fits", verbose=False)
+download_sdss(title_string+"_g.fits", title_string+"_i.fits", gmaglim = 21)
+eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = title_string+"_g.fits", img2 = title_string+"_i.fits", verbose=False)
 
 # values determined by ralf/daniel @ wiyn
 kg = 0.20
 kr = 0.12
 ki = 0.058
 
-cal_A_g =  0.0568
-cal_A_i =  0.0292
+# get some auxiliary info from the phot output
+gXAIRMASS = np.loadtxt(title_string+'_g.sdssphot', usecols=(9,), dtype=str, unpack=True)
+iXAIRMASS = np.loadtxt(title_string+'_i.sdssphot', usecols=(9,), dtype=str, unpack=True)
+if gXAIRMASS[0] != 'INDEF':
+    gairmass, iairmass = gXAIRMASS.astype(float)[0], iXAIRMASS.astype(float)[0]
+
+LamEff,A_over_E_B_V_SandF,A_SandF,A_over_E_B_V_SFD,A_SFD= np.genfromtxt('extinction.tbl.txt', usecols=(2,3,4,5,6),unpack=True,skip_header=27,skip_footer=12)
+A_id = np.genfromtxt('extinction.tbl.txt', usecols=(1,),dtype=str,unpack=True,skip_header=27,skip_footer=12)
+E_B_V = np.genfromtxt('extinction.tbl.txt', usecols=(2,),skip_header=1,skip_footer=42)
+
+for j in range(len(A_id)):
+    if A_id[j] == 'g':
+        cal_A_g = A_over_E_B_V_SandF[j]*0.86*E_B_V # E(B-V) is the Schlegel+ value, S&F say with their calibration
+for j in range(len(A_id)):                                  # use 0.86*E(B-V) instead. cf. S&F2011 pg 1, 2011ApJ...737..103S
+    if A_id[j] == 'i':
+        cal_A_i = A_over_E_B_V_SandF[j]*0.86*E_B_V
+
+print 'Reddening correction :: g = {0:7.4f} : i = {1:7.4f}'.format(cal_A_g,cal_A_i)
 
 tolerance = 0.0001
-g_0 = mags_g - kg*1.043537637
-i_0 = mags_i - ki*1.037019711
+g_0 = mags_g - kg*gairmass
+i_0 = mags_i - ki*iairmass
 
-dm = 26.07
 i_sun = 4.58
-m_hi = 3.2E6
+
+v_magr, g_magr, i_magr = np.loadtxt('/Users/wjanesh/projects/uchvc-tools/sdssBVR.dat', usecols=(4, 12, 16), unpack=True)
+good_g, good_i = np.loadtxt('/Users/wjanesh/projects/uchvc-tools/sdssBVR.dat', usecols=(21,23), dtype=bool, unpack=True)
+
+good = np.where((v_magr-g_magr < 0.5) & (v_magr-g_magr > -1.5) & good_g & good_i)
+print good[0].size, v_magr.size
+v, g, i = v_magr[good], g_magr[good], i_magr[good]
+
+p = np.polyfit(g-i, v-g, 3)
+print p
+
+fit = np.poly1d(p)
+
+xplt = np.sort(g-i)
+x_fit = g-i
+y_data = v-g
+
+yplt = fit(xplt)
+y_fit = fit(x_fit)
+
+res = y_data - y_fit
+rms = np.sqrt(np.sum(res*res)/(res.size-4))
+var = np.sum((y_data-np.mean(y_data))**2)/(y_fit.size-1)
+chi_sq = np.sum(res*res/var)/(res.size-4)
+print rms, chi_sq
+
+# plt.scatter(g-i,v-g, edgecolors='none')
+# plt.plot(xplt, yplt, c='red')
+# plt.xlabel('g-i')
+# plt.ylabel('v-g')
+# plt.savefig('gi_to_v.pdf')
+f = open('mag_est.txt', 'w+')
+print '# r g     ge   i     ie   g-i  err   Mg    Mi   MV    M/L  L*      M*       HI/*'
+print >> f, '# r g     ge   i     ie   g-i  err   Mg    Mi   MV    M/L  L*      M*       HI/*'
+
 rs = np.array([45, 55, 65, 75, 85, 90, 45, 55, 65, 75, 85, 90])
 for i,r in enumerate(rs):
     color_guess = 0.0
@@ -283,5 +336,9 @@ for i,r in enumerate(rs):
     l_star = np.power(10,(i_sun-i_abs)/2.5)
     m_star = l_star*mtol
     hitostar = m_hi/m_star
-    print '{:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:4.2f} {:3.1e} {:3.1e} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,mtol,l_star,m_star,hitostar)
+    v_mag = g_mag + fit(g_mag - i_mag)
+    v_abs = v_mag - dm
+    print '{:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:5.2f} {:4.2f} {:3.1e} {:3.1e} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,v_abs,mtol,l_star,m_star,hitostar)
+    print >> f, '{:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:5.2f} {:4.2f} {:3.1e} {:3.1e} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,v_abs,mtol,l_star,m_star,hitostar)
 
+f.close()

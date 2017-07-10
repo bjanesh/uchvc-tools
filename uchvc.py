@@ -710,7 +710,7 @@ gmi = g_mag - i_mag
 # 
 # gmi = mu_gi*(g0-i0) + zp_gi
 # 
-# i_mag = i0 + eps_gi*gmi + zp_i #- cal_A_i 
+# i_mag = i0 + eps_gi*gmi + zp_i
 # g_mag = gmi + i_mag - cal_A_g 
 # i_mag = i_mag - cal_A_i
 # gmi = g_mag - i_mag

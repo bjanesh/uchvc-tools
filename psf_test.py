@@ -18,10 +18,10 @@ def main(argv):
 	iraf.imutil(_doprint=0)
 
 	for file_ in os.listdir("./"):
-		if file_.endswith("i_sh.fits"):
+		if file_.endswith("_i.fits"):
 			fits_file_i = file_
 			title_string = file_[0:9]
-		if file_.endswith("g_sh.fits"):
+		if file_.endswith("_g.fits"):
 			fits_file_g = file_
 				
 	
@@ -94,6 +94,17 @@ def main(argv):
 	
 	iraf.daophot.pstselect()
 	
+	with open("apcor_stars_g.txt") as foo:
+		lines = len(foo.readlines())
+	
+	iraf.pstselect.setParam('image',fits_file_g)
+	iraf.pstselect.setParam('photfile',"g_psfstars.mag.1")
+	iraf.pstselect.setParam('pstfile',"default")
+	iraf.pstselect.setParam('maxnpsf',lines)
+	iraf.pstselect.setParam('plottype',"mesh")
+	
+	iraf.daophot.pstselect()
+	
 	iraf.datapars.setParam('datamax',"INDEF")
 	iraf.datapars.setParam('gain',"gain")
 	iraf.datapars.setParam('ccdread',"rdnoise")
@@ -108,6 +119,13 @@ def main(argv):
 	iraf.psf.setParam('image',fits_file_i)
 	iraf.psf.setParam('photfile',"i_psfstars.mag.1")
 	iraf.psf.setParam('pstfile',fits_file_i+".pst.1")
+	iraf.psf.setParam('interactive', 'no')
+	iraf.daophot.psf()
+	
+	iraf.psf.setParam('image',fits_file_g)
+	iraf.psf.setParam('photfile',"g_psfstars.mag.1")
+	iraf.psf.setParam('pstfile',fits_file_g+".pst.1")
+	iraf.psf.setParam('interactive', 'no')
 	iraf.daophot.psf()
 	
 if __name__ == "__main__":

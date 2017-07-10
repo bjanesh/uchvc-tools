@@ -18,8 +18,8 @@ def erfc_p(x, a, b, m):
     return m*erfc((x-a)/(b*np.sqrt(2)))
 
 def main():
-    fits_g = 'AGC249525_g_sh.fits'
-    fits_i = 'AGC249525_i_sh.fits'
+    fits_g = 'AGC238626_g.fits'
+    fits_i = 'AGC238626_i.fits'
     
     # Define constants
     # extinction coefficients
@@ -46,7 +46,13 @@ def main():
     xnew = np.arange(-4.0,-0.25, 0.01)
     
     download_sdss(fits_g, fits_i, gmaglim = 22.0)
-    eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i, gairmass, iairmass = js_calibrate(img1 = fits_g, img2 = fits_i, verbose=False)
+    eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = fits_g, img2 = fits_i, verbose=False)
+    # get some auxiliary info from the phot output
+    gXAIRMASS = np.loadtxt(fits_g[0:-5]+'.sdssphot', usecols=(9,), dtype=str, unpack=True)
+    iXAIRMASS = np.loadtxt(fits_i[0:-5]+'.sdssphot', usecols=(9,), dtype=str, unpack=True)
+    if gXAIRMASS[0] != 'INDEF':
+        gairmass, iairmass = gXAIRMASS.astype(float)[0], iXAIRMASS.astype(float)[0]
+    
     # convert inst. mags to calibrated
     tolerance = 0.0001
     g_magjs = []

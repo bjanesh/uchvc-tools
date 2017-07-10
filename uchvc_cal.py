@@ -920,6 +920,7 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     
     # 95% Confidence band
     dy=q*np.sqrt(mse*(1./n + sx/sxd ))
+    dy1 = dy
     epsg_ucb=eps_g*x + zp_g +dy	# Upper confidence band
     epsg_lcb=eps_g*x + zp_g -dy	# Lower confidence band
 
@@ -952,6 +953,7 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     
     # 95% Confidence band
     dy=q*np.sqrt(mse*(1./n + sx/sxd ))
+    dy2 = dy
     epsi_ucb=eps_i*x + zp_i +dy	# Upper confidence band
     epsi_lcb=eps_i*x + zp_i -dy	# Lower confidence band
 
@@ -1081,9 +1083,51 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     hdulist1.close()
     hdulist2.close()
     
+    # print out a steven style help file, no writing to headers YET
+    with open(img_root+'_help_js.txt','w+') as f1:
+        print >> f1, "#  name           symbol   IMHEAD    value"
+        print >> f1, "----------------------------------------------------"
+        print >> f1, "  extn coeff      k_g      F_KG      {0:.7f}".format(kg)
+        print >> f1, "  extn coeff      k_i      F_KI      {0:.7f}".format(ki)
+        print >> f1, "  airmass in g    X_g      F_XG      {0:.7f}".format(gXAIRMASS)
+        print >> f1, "  airmass in i    X_i      F_XI      {0:.7f}".format(iXAIRMASS)
+        print >> f1, " - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        print >> f1, "  g color term    eps_g    F_EPS_G   {0:.7f}".format(eps_g)
+        print >> f1, "  g c.t. err      epse_g   F_EPSE_G  {0:.7f}".format(std_eps_g)
+        print >> f1, "  g zeropoint     ZP_g     F_ZP_G    {0:.7f}".format(zp_g)
+        print >> f1, "  g ZP err        ZPE_g    F_ZPE_G   {0:.7f}".format(std_zp_g)
+        print >> f1, "  g fit RMS       rms      F_RMS_G   {0:.7f}".format(dy1.std())
+        print >> f1, " - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        print >> f1, "  i color term    eps_i    F_EPS_I   {0:.7f}".format(eps_i)
+        print >> f1, "  i c.t. err      epse_i   F_EPSE_I  {0:.7f}".format(std_eps_i)
+        print >> f1, "  i zeropoint     ZP_i     F_ZP_I    {0:.7f}".format(zp_i)
+        print >> f1, "  i ZP err        ZPe_i    F_ZPE_I   {0:.7f}".format(std_zp_i)
+        print >> f1, "  i fit RMS       rms      F_RMS_I   {0:.7f}".format(dy2.std())
+        print >> f1, "----------------------------------------------------"
+        print >> f1, "other details:"
+        print >> f1, "  FWHM PSF [px]   fwhm     FWHMPSF   [see header]"
+        print >> f1, "  FWHM [arcsec] g fwhm     F_AVGSEE  {0:.5f}".format(0.11*gRAPERT/5)
+        print >> f1, "  FWHM [arcsec] i fwhm     F_AVGSEE  {0:.5f}".format(0.11*iRAPERT/5)
+        print >> f1, "  phot aperture (5xFWHM) g [arcsec]  {0:.5f}".format(0.11*gRAPERT)
+        print >> f1, "  phot aperture (5xFWHM) i [arcsec]  {0:.5f}".format(0.11*iRAPERT)
+        print >> f1, "----------------------------------------------------"
+        print >> f1, "photometric error cuts:"
+        print >> f1, "  maximum acceptable pODI PHOT error: {0:.4f}".format(podicut)
+        print >> f1, "  maximum acceptable sdss phot error: {0:.4f}".format(sdsscut)
+        print >> f1, "  N_stars surviving error cuts: {0:4d}".format(len(gi[errcut]))
+        # print >> f1, "  N_stars surviving sigma clip (i-i0 vs g-i plot): {0:4d}".format(len(gi_3))
+    print '--------------------------------------------------------------------------'
+    print 'Done! I saved some important information in the following files for you:'
+    print 'SDSS raw catalog values (csv):         ', img_root+'.sdss'
+    print 'SDSS catalog values w/ x,y positions:  ', img_root+'.sdssxy'
+    print 'Instrumental ODI magnitudes per image: ', img_root+'*.sdssphot'
+    print 'Calibration fit diagnostic plots:      ', img_root+'_photcal_js.pdf'
+    print 'Final calibration values:              ', img_root+'_help_js.txt'
+
+    
     return eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i
 
-if __name__ == '__main__':
+def main():
     # ask user input on which files to run on
     print 'This is a program to do SDSS-based photometric calibration on QR-ed pODI images.'
     print "I'm going to do all of the hard work for you and make some helpful files. "
@@ -1101,4 +1145,8 @@ if __name__ == '__main__':
     # print '--------------------------------------------------------------------------'
     # if not os.path.isfile(g_img.nofits()+'.sdssxy'):        
     download_sdss(g_img, i_img)
+    # calibrate(img1=g_img, img2=i_img)
     js_calibrate(img1=g_img, img2=i_img)
+
+if __name__ == '__main__':
+    main()

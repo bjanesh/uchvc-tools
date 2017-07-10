@@ -294,9 +294,10 @@ def main(argv):
     mag_file = 'calibrated_mags.dat'
 
     # read in magnitudes, colors, and positions(x,y)
-    gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
+    # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
+    gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
     # print len(gxr), "total stars"
-    
+    fwhm_sr = np.zeros_like(gxr)
     # filter out the things with crappy color errors
     color_error_cut = np.sqrt(2.0)*0.2
     mag_error_cut = 0.2
@@ -411,9 +412,11 @@ def main(argv):
         
         out_file = filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.pdf'
         mark_file = 'f_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+        filter_reg = 'f_reg_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
         circ_file = 'c_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
         fcirc_file = 'fc_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
         ds9_file = 'circles_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+        circles_file = 'region_coords.dat'
         
         cm_filter, gi_iso, i_m_iso = make_filter(dm, filter_file)
         stars_f = filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1)
@@ -576,6 +579,11 @@ def main(argv):
                 print >> ds9, "fk5;circle({:s},{:s},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr)
                 print >> ds9, "fk5;circle({:s},{:s},2') # color=magenta width=2 label=detection".format(ra_c, dec_c)
                 print >> ds9, "fk5;circle({:f},{:f},0.5') # color=black width=2 label=HI".format(hi_c_ra, hi_c_dec)
+            
+            f1 = open(filter_reg, 'w+')
+            for i in range(len(i_x_f)) :
+                print >> f1, 'image;circle({0:8.2f},{1:8.2f},10) # color=green width=2 edit=0 move=0 delete=0 highlite=0'.format(i_x_f[i],i_y_f[i])
+            f1.close()
                 
             f1 = open(mark_file, 'w+')
             for i in range(len(i_x_f)) :
@@ -590,6 +598,9 @@ def main(argv):
             with open(fcirc_file,'w+') as f3:
                 for i,x in enumerate(i_x_fc):
                     print >> f3, i_x_fc[i], i_y_fc[i], fwhm_sfc[i]
+                    
+            with open(circles_file,'w+') as f4:
+                print >> f4, circ_pix_x, circ_pix_y
             
             # center_file = 'im_cens_'+dm_string+'_'+fwhm_string+'.dat'
             # im_cens = open(center_file,'w+')
