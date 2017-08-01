@@ -569,7 +569,7 @@ def main(argv):
         # print ra_c, dec_c
         # print hi_c_ra, hi_c_dec
         
-        print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | β = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)
+        print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)
         print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)        
 
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
@@ -679,7 +679,7 @@ def main(argv):
             
             plt.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
             plt.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
-            plt.scatter(gmi_f, i_mag_f,  color='red', marker='o', s=3, edgecolors='none')
+            plt.scatter(gmi_f, i_mag_f,  color='red', marker='o', s=15, edgecolors='none')
             # plt.scatter(gmi_c, i_mag_c,  color='red', marker='o', s=3, edgecolors='none')
             plt.errorbar(bxvals, bcenters, xerr=i_ierrAVG, yerr=gmi_errAVG, linestyle='None', color='black', capsize=0, ms=0)
             plt.tick_params(axis='y',left='on',right='off',labelleft='on',labelright='off')
@@ -714,7 +714,7 @@ def main(argv):
             # ax3 = plt.subplot(2,2,4)
             ax3 = plt.subplot2grid((2,4), (1,2))
             plt.scatter(gmi_c, i_mag_c,  color='black', marker='o', s=3, edgecolors='none')
-            plt.scatter(gmi_fc, i_mag_fc,  color='red', marker='o', s=3, edgecolors='none')    
+            plt.scatter(gmi_fc, i_mag_fc,  color='red', marker='o', s=15, edgecolors='none')    
             plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='off')
             ax0.yaxis.set_label_position('left')
             plt.title('in detection circle')
@@ -726,7 +726,7 @@ def main(argv):
         
             ax4 = plt.subplot2grid((2,4), (1,3), sharey=ax3)
             plt.scatter(gmi_cr, i_mag_cr,  color='black', marker='o', s=3, edgecolors='none')
-            plt.scatter(gmi_fcr, i_mag_fcr,  color='red', marker='o', s=3, edgecolors='none')    
+            plt.scatter(gmi_fcr, i_mag_fcr,  color='red', marker='o', s=15, edgecolors='none')    
             plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='on')
             plt.title('in ref. circle')
             ax0.yaxis.set_label_position('left')
