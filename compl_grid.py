@@ -9,7 +9,7 @@ from scipy import interpolate
 from scipy.optimize import curve_fit
 from scipy.special import erfc
 import matplotlib.pyplot as plt
-from uchvc_cal import download_sdss, js_calibrate
+from odi_calibrate import download_sdss, js_calibrate
 
 def cubic(x, a, b, c, d):
     return a*x**3 + b*x**2 + c*x + d
@@ -18,8 +18,11 @@ def erfc_p(x, a, b, m):
     return m*erfc((x-a)/(b*np.sqrt(2)))
 
 def main():
-    fits_g = 'AGC249525_g_sh.fits'
-    fits_i = 'AGC249525_i_sh.fits'
+    path = os.getcwd()
+    steps = path.split('/')
+    objname = steps[-1].upper()
+    fits_g = objname+'_g.fits'
+    fits_i = objname+'_i.fits'
     
     # Define constants
     # extinction coefficients
@@ -43,16 +46,23 @@ def main():
     fg = interpolate.interp1d(g_i, complg, kind=3)
     fi = interpolate.interp1d(i_i, compli, kind=3)
     
-    xnew = np.arange(-4.0,-0.25, 0.01)
+    xnew = np.arange(-6.0,-0.95, 0.01)
     
     download_sdss(fits_g, fits_i, gmaglim = 22.0)
-    eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i, gairmass, iairmass = js_calibrate(img1 = fits_g, img2 = fits_i, verbose=False)
+    eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = fits_g, img2 = fits_i, verbose=False)
+    
+    # get some auxiliary info from the phot output
+    gXAIRMASS = np.loadtxt(fits_g[0:-5]+'_cal.sdssphot', usecols=(9,), dtype=str, unpack=True)
+    iXAIRMASS = np.loadtxt(fits_i[0:-5]+'_cal.sdssphot', usecols=(9,), dtype=str, unpack=True)
+    # keep the airmasses and aperture radii as single values
+    gXAIRMASS, iXAIRMASS = gXAIRMASS.astype(float)[0], iXAIRMASS.astype(float)[0]
+    
     # convert inst. mags to calibrated
     tolerance = 0.0001
     g_magjs = []
     i_magjs = []
-    g_0 = xnew - kg*gairmass
-    i_0 = xnew - ki*iairmass
+    g_0 = xnew - kg*gXAIRMASS
+    i_0 = xnew - ki*iXAIRMASS
     for j,mag in enumerate(g_0):
         color_guess = 0.0
         color_diff = 1.0
@@ -70,8 +80,8 @@ def main():
     
     g_js = []
     i_js = []
-    g0 = gi - kg*gairmass
-    i0 = ii - ki*iairmass
+    g0 = gi - kg*gXAIRMASS
+    i0 = ii - ki*iXAIRMASS
     for j,mag in enumerate(g0):
         color_guess = 0.0
         color_diff = 1.0

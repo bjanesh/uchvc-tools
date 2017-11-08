@@ -22,7 +22,7 @@ def getHIcentroid(object):
     from astropy.coordinates import SkyCoord
     uchvcdb = os.environ['HOME']+'/projects/uchvc-db/predblist.sort.csv'
     name, coords = np.loadtxt(uchvcdb, usecols=(1,2), dtype=str, delimiter=',', unpack=True)
-    print object
+    # print object
     # find the right row
     coord = [this for i,this in enumerate(coords) if object.upper() in name[i]][0]
     
@@ -294,8 +294,10 @@ def main(argv):
     mag_file = 'calibrated_mags.dat'
 
     # read in magnitudes, colors, and positions(x,y)
-    gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
+    # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
+    gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
     # print len(gxr), "total stars"
+    fwhm_sr = np.ones_like(gxr)
     
     # filter out the things with crappy color errors
     color_error_cut = np.sqrt(2.0)*0.2
@@ -571,7 +573,7 @@ def main(argv):
 
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
         #iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no') 
-        if pct > 95.:
+        if pct > 90.:
             with open(ds9_file,'w+') as ds9:
                 print >> ds9, "fk5;circle({:s},{:s},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr)
                 print >> ds9, "fk5;circle({:s},{:s},2') # color=magenta width=2 label=detection".format(ra_c, dec_c)
@@ -636,7 +638,7 @@ def main(argv):
             # setup the pdf output
             pp = PdfPages('f_'+ out_file)
             plt.clf()
-            plt.figure(figsize=(11,8.5))
+            plt.figure(figsize=(8,6))
             # plot
             # print "Plotting for m-M = ",dm
             ax0 = plt.subplot(2,2,1)
@@ -645,9 +647,9 @@ def main(argv):
             plt.plot(x_circr,y_circr,linestyle='-', color='gold')
             plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
             # plt.scatter(i_ra_c, i_dec_c,  color='red', marker='o', s=3, edgecolors='none')
-            plt.scatter(i_ra_f, i_dec_f,  c=gmi_f, marker='o', s=(30-np.array(i_mag_f)), edgecolors='none', cmap=cm.rainbow)
-            plt.clim(0,2)
-            plt.colorbar()
+            plt.scatter(i_ra_f, i_dec_f,  c='red', marker='o', s=10, edgecolors='none')
+            # plt.clim(0,2)
+            # plt.colorbar()
             plt.ylabel('Dec (arcmin)')
             plt.xlim(0,max(i_ra))
             plt.ylim(0,max(i_dec))
@@ -668,7 +670,7 @@ def main(argv):
             
             plt.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
             plt.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
-            plt.scatter(gmi_f, i_mag_f,  color='red', marker='o', s=3, edgecolors='none')
+            plt.scatter(gmi_f, i_mag_f,  color='red', marker='o', s=10, edgecolors='none')
             # plt.scatter(gmi_c, i_mag_c,  color='red', marker='o', s=3, edgecolors='none')
             plt.errorbar(bxvals, bcenters, xerr=i_ierrAVG, yerr=gmi_errAVG, linestyle='None', color='black', capsize=0, ms=0)
             plt.tick_params(axis='y',left='on',right='off',labelleft='on',labelright='off')
@@ -686,6 +688,7 @@ def main(argv):
             plt.imshow(S, extent=extent, interpolation='nearest',cmap=cm.gray)
             # plt.imshow(segm, extent=extent, cmap=rand_cmap, alpha=0.5)
             cbar_S = plt.colorbar()
+            cbar_S.set_label('$\sigma$ from local mean')
             # cbar_S.tick_params(labelsize=10)
             plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
             plt.plot(x_circr,y_circr,linestyle='-', color='gold')
@@ -694,7 +697,7 @@ def main(argv):
             # ax3.pcolormesh(X,Y,grid_gaus)
             plt.xlabel('RA (arcmin)')
             plt.ylabel('Dec (arcmin)')
-            plt.title('smoothed star map')
+            plt.title('smoothed stellar density')
             # plt.ylabel('Dec (arcmin)')
             plt.xlim(0,max(i_ra))
             plt.ylim(0,max(i_dec))
@@ -703,7 +706,7 @@ def main(argv):
             # ax3 = plt.subplot(2,2,4)
             ax3 = plt.subplot2grid((2,4), (1,2))
             plt.scatter(gmi_c, i_mag_c,  color='black', marker='o', s=3, edgecolors='none')
-            plt.scatter(gmi_fc, i_mag_fc,  color='red', marker='o', s=3, edgecolors='none')    
+            plt.scatter(gmi_fc, i_mag_fc,  color='red', marker='o', s=10, edgecolors='none')    
             plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='off')
             ax0.yaxis.set_label_position('left')
             plt.title('in detection circle')
@@ -715,7 +718,7 @@ def main(argv):
         
             ax4 = plt.subplot2grid((2,4), (1,3), sharey=ax3)
             plt.scatter(gmi_cr, i_mag_cr,  color='black', marker='o', s=3, edgecolors='none')
-            plt.scatter(gmi_fcr, i_mag_fcr,  color='red', marker='o', s=3, edgecolors='none')    
+            plt.scatter(gmi_fcr, i_mag_fcr,  color='red', marker='o', s=10, edgecolors='none')    
             plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='on')
             plt.title('in ref. circle')
             ax0.yaxis.set_label_position('left')

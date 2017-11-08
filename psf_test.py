@@ -18,10 +18,10 @@ def main(argv):
 	iraf.imutil(_doprint=0)
 
 	for file_ in os.listdir("./"):
-		if file_.endswith("i_sh.fits"):
+		if file_.endswith("i.fits"):
 			fits_file_i = file_
 			title_string = file_[0:9]
-		if file_.endswith("g_sh.fits"):
+		if file_.endswith("g.fits"):
 			fits_file_g = file_
 				
 	
@@ -32,25 +32,25 @@ def main(argv):
 	fwhm_g = fits_h_g[0].header['FWHMPSF']
 	print 'Image FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i)
 	
-	if not os.path.isdir('psf'): # make a psf subfolder if it doesn't exist
-		os.mkdir('psf')
+	# if not os.path.isdir('psf'): # make a psf subfolder if it doesn't exist
+	# 	os.mkdir('psf')
 	
-	# and then copy in the data files if they don't already exist as files
-	if not os.path.isfile('psf/'+fits_file_i):
-		iraf.images.imcopy(fits_file_i,'psf/'+fits_file_i,verbose="yes")
-	
-	if not os.path.isfile('psf/'+fits_file_g) :
-		iraf.images.imcopy(fits_file_g,'psf/'+fits_file_g,verbose="yes")
-	
-	# also copy in the apcor star lists
-	if not (os.path.isfile('psf/apcor_stars_i.txt') or os.path.islink('psf/apcor_stars_i.txt')) :
-		shutil.copyfile('apcor_stars_i.txt','psf/apcor_stars_i.txt')	
-	
-	if not (os.path.isfile('psf/apcor_stars_g.txt') or os.path.islink('psf/apcor_stars_g.txt')) :
-		shutil.copyfile('apcor_stars_g.txt','psf/apcor_stars_g.txt')	
-		
-	# and change to the psf folder
-	os.chdir('psf')
+	# # and then copy in the data files if they don't already exist as files
+	# if not os.path.isfile('psf/'+fits_file_i):
+	# 	iraf.images.imcopy(fits_file_i,'psf/'+fits_file_i,verbose="yes")
+	# 
+	# if not os.path.isfile('psf/'+fits_file_g) :
+	# 	iraf.images.imcopy(fits_file_g,'psf/'+fits_file_g,verbose="yes")
+	# 
+	# # also copy in the apcor star lists
+	# if not (os.path.isfile('psf/apcor_stars_i.txt') or os.path.islink('psf/apcor_stars_i.txt')) :
+	# 	shutil.copyfile('apcor_stars_i.txt','psf/apcor_stars_i.txt')	
+	# 
+	# if not (os.path.isfile('psf/apcor_stars_g.txt') or os.path.islink('psf/apcor_stars_g.txt')) :
+	# 	shutil.copyfile('apcor_stars_g.txt','psf/apcor_stars_g.txt')	
+	# 	
+	# # and change to the psf folder
+	# os.chdir('psf')
 
 	iraf.unlearn(iraf.phot,iraf.datapars,iraf.photpars,iraf.centerpars,iraf.fitskypars)
 	
@@ -92,7 +92,7 @@ def main(argv):
 	iraf.pstselect.setParam('maxnpsf',lines)
 	iraf.pstselect.setParam('plottype',"mesh")
 	
-	iraf.daophot.pstselect()
+	iraf.daophot.pstselect(verify='no', mode='h')
 	
 	iraf.datapars.setParam('datamax',"INDEF")
 	iraf.datapars.setParam('gain',"gain")
@@ -108,7 +108,7 @@ def main(argv):
 	iraf.psf.setParam('image',fits_file_i)
 	iraf.psf.setParam('photfile',"i_psfstars.mag.1")
 	iraf.psf.setParam('pstfile',fits_file_i+".pst.1")
-	iraf.daophot.psf()
+	iraf.daophot.psf(verify='no', mode='h')
 	
 if __name__ == "__main__":
 	main(sys.argv[1:])	

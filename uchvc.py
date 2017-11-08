@@ -1,5 +1,5 @@
 #! /usr/local/bin/python
-import os, sys, time
+import os, sys, time, glob
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
@@ -11,7 +11,7 @@ from astropy.io import fits
 from pyraf import iraf
 from escut_new import escut 
 from rand_bkg import bkg_boxes
-from uchvc_cal import js_calibrate, download_sdss
+from odi_calibrate import js_calibrate, download_sdss
 
 home_root = os.environ['HOME']
 funpack_path = home_root+'/bin/funpack'
@@ -336,18 +336,19 @@ if not os.path.isfile('ifirst_tol7.out') :
 # call("awk '{ if ($2 ~ "odi_i") print $5, $6 }' ifirst_tol7.dat > tol7_i.pos")
 
 # print matched sources to a file suitable for marking
-if os.path.isfile('ifirst_tol7.out') :
-    mx,my = np.loadtxt('ifirst_tol7.out',usecols=(4,5),unpack=True)
-    mfilter = np.loadtxt('ifirst_tol7.out',usecols=(1,),dtype=str,unpack=True)
-    match_pos_file_g = open("tol7_g.pos", 'w+')
-    match_pos_file_i = open("tol7_i.pos", 'w+')
-    for i in range(len(mx)) :
-        if mfilter[i]== 'odi_g' :
-            print >> match_pos_file_g, mx[i], my[i]
-        if mfilter[i] == 'odi_i' :
-            print >> match_pos_file_i, mx[i], my[i]
-    match_pos_file_g.close()
-    match_pos_file_i.close()
+if len(glob.glob('tol*.pos')) < 2:
+    if os.path.isfile('ifirst_tol7.out') :
+        mx,my = np.loadtxt('ifirst_tol7.out',usecols=(4,5),unpack=True)
+        mfilter = np.loadtxt('ifirst_tol7.out',usecols=(1,),dtype=str,unpack=True)
+        match_pos_file_g = open("tol7_g.pos", 'w+')
+        match_pos_file_i = open("tol7_i.pos", 'w+')
+        for i in range(len(mx)) :
+            if mfilter[i]== 'odi_g' :
+                print >> match_pos_file_g, mx[i], my[i]
+            if mfilter[i] == 'odi_i' :
+                print >> match_pos_file_i, mx[i], my[i]
+        match_pos_file_g.close()
+        match_pos_file_i.close()
     
 # import the getfwhm task as a pyraf task
 iraf.task(getfwhm = "home$scripts/getfwhm.cl")
