@@ -159,10 +159,13 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     
     above_th = [(int(i),int(j)) for i in range(len(S)) for j in range(len(S[i])) if (S[i][j] >= S_th)]
     
-    segm = detect_sources(S, 2.0, npixels=5)
-    props = source_properties(S, segm)
-    columns = ['id', 'maxval_xpos', 'maxval_ypos', 'max_value', 'area']
-    tbl = properties_table(props, columns=columns)
+    try: 
+        segm = detect_sources(S, 2.0, npixels=5)
+        props = source_properties(S, segm)
+        columns = ['id', 'maxval_xpos', 'maxval_ypos', 'max_value', 'area']
+        tbl = properties_table(props, columns=columns)
+    except ValueError:
+        tbl = []
     # print tbl
     # rand_cmap = random_cmap(segm.max + 1, random_state=12345)
     
