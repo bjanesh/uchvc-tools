@@ -2,7 +2,7 @@
 import os, sys
 import numpy as np
 from pyraf import iraf
-from odi_calibrate import js_calibrate
+from odi_calibrate import download_sdss, js_calibrate
 from sdss_fit import getVabs
 
 iraf.images(_doprint=0)
@@ -97,7 +97,7 @@ if not os.path.isfile(title_string+'_g_masked.fits'):
 
     m3,m4,m5,m6 = np.loadtxt('regions.txt',usecols=(2,3,4,5),unpack=True)
 
-    print "g sky value is:",np.mean(bgmean_g)
+    # print "g sky value is:",np.mean(bgmean_g)
 
     for i in range(len(m3)) :
         x1 = m3[i] - (m5[i]/2.)
@@ -217,9 +217,9 @@ for r in rs:
     iraf.photpars.setParam('apertures',7.) 
     iraf.fitskypars.setParam('annulus',10.)
     #
-    iraf.apphot.phot(image=title_string+"_g.fits", coords=fcirc_file, output="mag_min_g.dat")
+    iraf.apphot.phot(image=title_string+"_g.fits", coords=fcirc_file, output="mag_min_g_{:2d}.dat".format(r))
     txdump_out = open('phot_indiv_g.txdump','w+')
-    iraf.ptools.txdump(textfiles='mag_min_g.dat', fields="id,mag,merr,flux,area,stdev,nsky", expr='yes', headers='no', Stdout=txdump_out)
+    iraf.ptools.txdump(textfiles="mag_min_g_{:2d}.dat".format(r), fields="id,mag,merr,flux,area,stdev,nsky", expr='yes', headers='no', Stdout=txdump_out)
     txdump_out.close()
 
     iraf.fitskypars.setParam('dannulus',10.)
@@ -227,9 +227,9 @@ for r in rs:
     iraf.photpars.setParam('apertures',7.) 
     iraf.fitskypars.setParam('annulus',10.)
     #
-    iraf.apphot.phot(image=title_string+"_i.fits", coords=fcirc_file, output="mag_min_i.dat")
+    iraf.apphot.phot(image=title_string+"_i.fits", coords=fcirc_file, output="mag_min_i_{:2d}.dat".format(r))
     txdump_out = open('phot_indiv_i.txdump','w+')
-    iraf.ptools.txdump(textfiles='mag_min_i.dat', fields="id,mag,merr,flux,area,stdev,nsky", expr='yes', headers='no', Stdout=txdump_out)
+    iraf.ptools.txdump(textfiles="mag_min_i_{:2d}.dat".format(r), fields="id,mag,merr,flux,area,stdev,nsky", expr='yes', headers='no', Stdout=txdump_out)
     txdump_out.close()
 
     fluxes_i, areas_i, stdevs_i, nskys_i = np.loadtxt('phot_indiv_i.txdump',usecols=(3,4,5,6),unpack=True)
@@ -267,7 +267,7 @@ me_g = np.hstack((merr_g, merrs_g))
 # mags_g = -2.5*np.log10(flux_g)+2.5*np.log10(300.0)
 
 # print mags_i, mags_g
-
+download_sdss(title_string+"_g.fits", title_string+"_i.fits", gmaglim = 21)
 eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = title_string+"_g.fits", img2 = title_string+"_i.fits", verbose=False)
 
 # values determined by ralf/daniel @ wiyn
@@ -305,11 +305,47 @@ for j in range(len(A_id)):                                  # use 0.86*E(B-V) in
 print 'Reddening correction :: g = {0:7.4f} : i = {1:7.4f}'.format(cal_A_g,cal_A_i)
 
 tolerance = 0.0001
+
 g_0 = mags_g - kg*amg
 i_0 = mags_i - ki*ami
 
 i_sun = 4.58
 m_hi = getHImass(title_string, dm)
+
+v_magr, g_magr, i_magr = np.loadtxt('/Users/wjanesh/projects/uchvc-tools/sdssBVR.dat', usecols=(4, 12, 16), unpack=True)
+good_g, good_i = np.loadtxt('/Users/wjanesh/projects/uchvc-tools/sdssBVR.dat', usecols=(21,23), dtype=bool, unpack=True)
+
+good = np.where((v_magr-g_magr < 0.5) & (v_magr-g_magr > -1.5) & good_g & good_i)
+print good[0].size, v_magr.size
+v, g, i = v_magr[good], g_magr[good], i_magr[good]
+
+p = np.polyfit(g-i, v-g, 3)
+print p
+
+fit = np.poly1d(p)
+
+xplt = np.sort(g-i)
+x_fit = g-i
+y_data = v-g
+
+yplt = fit(xplt)
+y_fit = fit(x_fit)
+
+res = y_data - y_fit
+rms = np.sqrt(np.sum(res*res)/(res.size-4))
+var = np.sum((y_data-np.mean(y_data))**2)/(y_fit.size-1)
+chi_sq = np.sum(res*res/var)/(res.size-4)
+print rms, chi_sq
+
+# plt.scatter(g-i,v-g, edgecolors='none')
+# plt.plot(xplt, yplt, c='red')
+# plt.xlabel('g-i')
+# plt.ylabel('v-g')
+# plt.savefig('gi_to_v.pdf')
+f = open('mag_est.txt', 'w+')
+print '# r g     ge   i     ie   g-i  err   Mg    Mi   MV    M/L  L*      M*       HI/*'
+print >> f, '# r g     ge   i     ie   g-i  err   Mg    Mi   MV    M/L  L*      M*       HI/*'
+
 rs = np.array([45, 55, 65, 75, 85, 90, 45, 55, 65, 75, 85, 90])
 
 with open('optical_props.txt', 'w+') as opt:
@@ -345,3 +381,6 @@ with open('optical_props.txt', 'w+') as opt:
 # 
 for file_ in ["area.txdump","mag_area.dat","mag_est_g.dat","phot_region_g.txdump","mag_est_i.dat","phot_region_i.txdump"]:
     os.remove(file_)
+
+f.close()
+

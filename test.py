@@ -45,6 +45,7 @@ def dist2HIcentroid(ra, dec, ra_hi, dec_hi):
     from astropy.coordinates import SkyCoord
     c_hi = SkyCoord(ra = ra_hi, dec = dec_hi, unit=(u.hourangle, u.deg))
     c_peak = SkyCoord(ra = ra, dec = dec, unit=(u.hourangle, u.deg))
+    print c_hi, c_peak
     sep = c_hi.separation(c_peak)
     return sep.arcsecond
     

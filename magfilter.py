@@ -298,7 +298,6 @@ def main(argv):
     gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
     # print len(gxr), "total stars"
     fwhm_sr = np.ones_like(gxr)
-    
     # filter out the things with crappy color errors
     color_error_cut = np.sqrt(2.0)*0.2
     mag_error_cut = 0.2
@@ -413,9 +412,11 @@ def main(argv):
         
         out_file = filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.pdf'
         mark_file = 'f_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+        filter_reg = 'f_reg_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
         circ_file = 'c_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
         fcirc_file = 'fc_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
         ds9_file = 'circles_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+        circles_file = 'region_coords.dat'
         
         cm_filter, gi_iso, i_m_iso = make_filter(dm, filter_file)
         stars_f = filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1)
@@ -568,7 +569,7 @@ def main(argv):
         # print ra_c, dec_c
         # print hi_c_ra, hi_c_dec
         
-        print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | β = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)
+        print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)
         print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)        
 
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
@@ -578,6 +579,11 @@ def main(argv):
                 print >> ds9, "fk5;circle({:s},{:s},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr)
                 print >> ds9, "fk5;circle({:s},{:s},2') # color=magenta width=2 label=detection".format(ra_c, dec_c)
                 print >> ds9, "fk5;circle({:f},{:f},0.5') # color=black width=2 label=HI".format(hi_c_ra, hi_c_dec)
+            
+            f1 = open(filter_reg, 'w+')
+            for i in range(len(i_x_f)) :
+                print >> f1, 'image;circle({0:8.2f},{1:8.2f},10) # color=green width=2 edit=0 move=0 delete=0 highlite=0'.format(i_x_f[i],i_y_f[i])
+            f1.close()
                 
             f1 = open(mark_file, 'w+')
             for i in range(len(i_x_f)) :
@@ -592,6 +598,9 @@ def main(argv):
             with open(fcirc_file,'w+') as f3:
                 for i,x in enumerate(i_x_fc):
                     print >> f3, i_x_fc[i], i_y_fc[i], fwhm_sfc[i]
+                    
+            with open(circles_file,'w+') as f4:
+                print >> f4, circ_pix_x, circ_pix_y
             
             # center_file = 'im_cens_'+dm_string+'_'+fwhm_string+'.dat'
             # im_cens = open(center_file,'w+')
@@ -670,7 +679,8 @@ def main(argv):
             
             plt.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
             plt.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
-            plt.scatter(gmi_f, i_mag_f,  color='red', marker='o', s=10, edgecolors='none')
+            plt.scatter(gmi_f, i_mag_f,  color='red', marker='o', s=15, edgecolors='none')
+
             # plt.scatter(gmi_c, i_mag_c,  color='red', marker='o', s=3, edgecolors='none')
             plt.errorbar(bxvals, bcenters, xerr=i_ierrAVG, yerr=gmi_errAVG, linestyle='None', color='black', capsize=0, ms=0)
             plt.tick_params(axis='y',left='on',right='off',labelleft='on',labelright='off')
@@ -706,7 +716,7 @@ def main(argv):
             # ax3 = plt.subplot(2,2,4)
             ax3 = plt.subplot2grid((2,4), (1,2))
             plt.scatter(gmi_c, i_mag_c,  color='black', marker='o', s=3, edgecolors='none')
-            plt.scatter(gmi_fc, i_mag_fc,  color='red', marker='o', s=10, edgecolors='none')    
+            plt.scatter(gmi_fc, i_mag_fc,  color='red', marker='o', s=15, edgecolors='none')    
             plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='off')
             ax0.yaxis.set_label_position('left')
             plt.title('in detection circle')
@@ -718,7 +728,7 @@ def main(argv):
         
             ax4 = plt.subplot2grid((2,4), (1,3), sharey=ax3)
             plt.scatter(gmi_cr, i_mag_cr,  color='black', marker='o', s=3, edgecolors='none')
-            plt.scatter(gmi_fcr, i_mag_fcr,  color='red', marker='o', s=10, edgecolors='none')    
+            plt.scatter(gmi_fcr, i_mag_fcr,  color='red', marker='o', s=15, edgecolors='none')    
             plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='on')
             plt.title('in ref. circle')
             ax0.yaxis.set_label_position('left')
