@@ -11,11 +11,7 @@ from astropy.io import fits
 from pyraf import iraf
 from escut_new import escut 
 from rand_bkg import bkg_boxes
-<<<<<<< HEAD
 from odi_calibrate import calibrate, js_calibrate, download_sdss
-=======
-from odi_calibrate import js_calibrate, download_sdss
->>>>>>> 077eb3cf02a4d9aeedae8cc9fa0fc02e66b9c48d
 
 home_root = os.environ['HOME']
 funpack_path = home_root+'/bin/funpack'
