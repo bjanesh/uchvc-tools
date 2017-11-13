@@ -20,9 +20,9 @@ except ImportError :
 def getHIcentroid(object):
     from astropy import units as u
     from astropy.coordinates import SkyCoord
-    uchvcdb = os.environ['HOME']+'/projects/uchvc-db/predblist.sort.csv'
+    uchvcdb = os.path.dirname(os.path.abspath(__file__))+'/predblist.sort.csv'
     name, coords = np.loadtxt(uchvcdb, usecols=(1,2), dtype=str, delimiter=',', unpack=True)
-    print object
+    # print object
     # find the right row
     coord = [this for i,this in enumerate(coords) if object.upper() in name[i]][0]
     
