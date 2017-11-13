@@ -234,6 +234,7 @@ def download_sdss(img1, img2, gmaglim = 21):
     # keep things that are actually stars (defined as being psf's) and with the right magnitude range (arbitrary)
 
     keep_stars = ((probPSF == 1) & (psfMag_g < gmaglim))
+    keep_gals = ((probPSF == 0) & (psfMag_g < gmaglim))
     print 'keeping', len(np.where(keep_stars)[0]), 'stars of', len(psfMag_g), 'sources'
     
     # then write out separate files for g and i
@@ -728,7 +729,7 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
         print 'You need some non-core python packages and a working IRAF to run this program'
         print "Try 'pip install astropy numpy scipy matplotlib pyraf' and try again"
 
-    img_root = img1[:-10]
+    img_root = img1.split('_')[0]
 
     # values determined by ralf/daniel @ wiyn
     kg = 0.20
@@ -886,11 +887,15 @@ def js_calibrate(img1 = None, img2 = None, verbose=True):
     dg = g - g0
     dge = np.sqrt(ge**2 + gMERR**2)
 
-    podicut, sdsscut = 0.05, 0.05
+    podicut, sdsscut = 0.01, 0.05
     # print np.median(gSERR), np.median(iSERR)
     # cuts for better fits go here
     errcut = [j for j in range(len(gMERR)) if (gMERR[j] < podicut and iMERR[j] < podicut and ge[j] < sdsscut and ie[j] < sdsscut and gSKY[j] > np.median(gSERR) and iSKY[j] > np.median(iSERR) )]#and di[j] < 26.5 and di[j] > 26.0)]
 
+    with open('photcal_js.pos','w+') as pos_file:
+        for j in range(len(gi[errcut])):
+            print >> pos_file, gXPOS[errcut][j], gYPOS[errcut][j]
+            
     if verbose:
         for j in range(len(gi[errcut])):
             print gXPOS[errcut][j], gYPOS[errcut][j], ra[errcut][j], dec[errcut][j], gMAG[errcut][j], gMERR[errcut][j], iMAG[errcut][j], iMERR[errcut][j], di[errcut][j], dg[errcut][j], gi[errcut][j]
