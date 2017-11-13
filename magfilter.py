@@ -159,10 +159,13 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     
     above_th = [(int(i),int(j)) for i in range(len(S)) for j in range(len(S[i])) if (S[i][j] >= S_th)]
     
-    segm = detect_sources(S, 2.0, npixels=5)
-    props = source_properties(S, segm)
-    columns = ['id', 'maxval_xpos', 'maxval_ypos', 'max_value', 'area']
-    tbl = properties_table(props, columns=columns)
+    try: 
+        segm = detect_sources(S, 2.0, npixels=5)
+        props = source_properties(S, segm)
+        columns = ['id', 'maxval_xpos', 'maxval_ypos', 'max_value', 'area']
+        tbl = properties_table(props, columns=columns)
+    except ValueError:
+        tbl = []
     # print tbl
     # rand_cmap = random_cmap(segm.max + 1, random_state=12345)
     
@@ -297,7 +300,7 @@ def main(argv):
     # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
     gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
     # print len(gxr), "total stars"
-    fwhm_sr = np.zeros_like(gxr)
+    fwhm_sr = np.ones_like(gxr)
     # filter out the things with crappy color errors
     color_error_cut = np.sqrt(2.0)*0.2
     mag_error_cut = 0.2
@@ -574,7 +577,7 @@ def main(argv):
 
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
         #iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no') 
-        if pct > 95.:
+        if pct > 90.:
             with open(ds9_file,'w+') as ds9:
                 print >> ds9, "fk5;circle({:s},{:s},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr)
                 print >> ds9, "fk5;circle({:s},{:s},2') # color=magenta width=2 label=detection".format(ra_c, dec_c)
@@ -647,7 +650,7 @@ def main(argv):
             # setup the pdf output
             pp = PdfPages('f_'+ out_file)
             plt.clf()
-            plt.figure(figsize=(11,8.5))
+            plt.figure(figsize=(8,6))
             # plot
             # print "Plotting for m-M = ",dm
             ax0 = plt.subplot(2,2,1)
@@ -656,9 +659,9 @@ def main(argv):
             plt.plot(x_circr,y_circr,linestyle='-', color='gold')
             plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
             # plt.scatter(i_ra_c, i_dec_c,  color='red', marker='o', s=3, edgecolors='none')
-            plt.scatter(i_ra_f, i_dec_f,  c=gmi_f, marker='o', s=(30-np.array(i_mag_f)), edgecolors='none', cmap=cm.rainbow)
-            plt.clim(0,2)
-            plt.colorbar()
+            plt.scatter(i_ra_f, i_dec_f,  c='red', marker='o', s=10, edgecolors='none')
+            # plt.clim(0,2)
+            # plt.colorbar()
             plt.ylabel('Dec (arcmin)')
             plt.xlim(0,max(i_ra))
             plt.ylim(0,max(i_dec))
@@ -680,6 +683,7 @@ def main(argv):
             plt.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
             plt.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
             plt.scatter(gmi_f, i_mag_f,  color='red', marker='o', s=15, edgecolors='none')
+
             # plt.scatter(gmi_c, i_mag_c,  color='red', marker='o', s=3, edgecolors='none')
             plt.errorbar(bxvals, bcenters, xerr=i_ierrAVG, yerr=gmi_errAVG, linestyle='None', color='black', capsize=0, ms=0)
             plt.tick_params(axis='y',left='on',right='off',labelleft='on',labelright='off')
@@ -697,6 +701,7 @@ def main(argv):
             plt.imshow(S, extent=extent, interpolation='nearest',cmap=cm.gray)
             # plt.imshow(segm, extent=extent, cmap=rand_cmap, alpha=0.5)
             cbar_S = plt.colorbar()
+            cbar_S.set_label('$\sigma$ from local mean')
             # cbar_S.tick_params(labelsize=10)
             plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
             plt.plot(x_circr,y_circr,linestyle='-', color='gold')
@@ -705,7 +710,7 @@ def main(argv):
             # ax3.pcolormesh(X,Y,grid_gaus)
             plt.xlabel('RA (arcmin)')
             plt.ylabel('Dec (arcmin)')
-            plt.title('smoothed star map')
+            plt.title('smoothed stellar density')
             # plt.ylabel('Dec (arcmin)')
             plt.xlim(0,max(i_ra))
             plt.ylim(0,max(i_dec))

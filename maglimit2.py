@@ -1,8 +1,9 @@
 #! /usr/local/bin/python
-import os
+import os, sys
 import numpy as np
 from pyraf import iraf
-from uchvc_cal import download_sdss, js_calibrate
+from odi_calibrate import download_sdss, js_calibrate
+from sdss_fit import getVabs
 
 iraf.images(_doprint=0)
 iraf.tv(_doprint=0)
@@ -13,13 +14,30 @@ iraf.photcal(_doprint=0)
 iraf.apphot(_doprint=0)  
 iraf.imutil(_doprint=0)
 
-title_string = 'AGC258237'
-dm = 24.02
-m_hi = 10**5.50
+def getHImass(object, dm):
+    uchvcdb = os.environ['HOME']+'/projects/uchvc-db/uchvc_hi_properties.txt'
+    name, mass = np.loadtxt(uchvcdb, usecols=(0,1), dtype=str, unpack=True)
+    # find the right row
+    coord = [i for i,this in enumerate(mass) if object.upper() in name[i]][0]
+    print 'the HI mass of', name[coord], 'is', mass[coord], 'at 1 Mpc'
+    
+    mpc = pow(10,((dm + 5.)/5.))/1000000.
+    logm = float(mass[coord])
+    mass = mpc*mpc*10**logm  # make sure to scale by the distance in Mpc^2
+    
+    print 'at {:4.2f} Mpc, the mass is {:4.2f}'.format(mpc, np.log10(mass))
+    return mass
 
-###
 epadu = 1.268899
+path = os.getcwd()
+steps = path.split('/')
+title_string = steps[-1].upper()        # which should always exist in the directory
 coords_file = 'region_coords.dat'
+# dm = 26.07
+print "computing magnitude estimates for", title_string
+# dm = float(raw_input("Enter the distance modulus: "))
+dm = float(sys.argv[1])
+print "at a distance modulus of", dm
 
 if not os.path.isfile(title_string+'_i_masked.fits'):
 
@@ -232,6 +250,11 @@ for r in rs:
 
     error_g = np.sqrt(np.sum(fluxes_g) / epadu + area_g * stdev_g**2 + area_g**2 * stdev_g**2 / nsky_g)
     merrs_g.append(1.0857 * error_g / np.sum(fluxes_g))
+    
+    os.remove("mag_min_g.dat")
+    os.remove("mag_min_i.dat")
+    os.remove("phot_indiv_g.txdump")
+    os.remove("phot_indiv_i.txdump")
 
 # print fl_i, flux_i, merr_i
 # print fl_g, flux_g, merr_g
@@ -252,11 +275,21 @@ kg = 0.20
 kr = 0.12
 ki = 0.058
 
-# get some auxiliary info from the phot output
-gXAIRMASS = np.loadtxt(title_string+'_g.sdssphot', usecols=(9,), dtype=str, unpack=True)
-iXAIRMASS = np.loadtxt(title_string+'_i.sdssphot', usecols=(9,), dtype=str, unpack=True)
-if gXAIRMASS[0] != 'INDEF':
-    gairmass, iairmass = gXAIRMASS.astype(float)[0], iXAIRMASS.astype(float)[0]
+# get the photometric calibration coefficients from Steven's help file <--
+# or from the image header/fits table/ whatever
+photcalFile = open(title_string+'_help_js.txt')
+photcal = photcalFile.read()
+photcalLines = photcal.splitlines()
+
+amg = float(photcalLines[25].split()[5])
+ami = float(photcalLines[26].split()[5])
+photcalFile.close()
+
+print amg, ami
+
+if not os.path.isfile('extinction.tbl.txt'):
+    print 'Fetching extinction table for',fits_h_i[0].header['RA'],fits_h_i[0].header['DEC']
+    getexttbl(fits_h_i[0].header['RA'],fits_h_i[0].header['DEC'])
 
 LamEff,A_over_E_B_V_SandF,A_SandF,A_over_E_B_V_SFD,A_SFD= np.genfromtxt('extinction.tbl.txt', usecols=(2,3,4,5,6),unpack=True,skip_header=27,skip_footer=12)
 A_id = np.genfromtxt('extinction.tbl.txt', usecols=(1,),dtype=str,unpack=True,skip_header=27,skip_footer=12)
@@ -272,10 +305,12 @@ for j in range(len(A_id)):                                  # use 0.86*E(B-V) in
 print 'Reddening correction :: g = {0:7.4f} : i = {1:7.4f}'.format(cal_A_g,cal_A_i)
 
 tolerance = 0.0001
-g_0 = mags_g - kg*gairmass
-i_0 = mags_i - ki*iairmass
+
+g_0 = mags_g - kg*amg
+i_0 = mags_i - ki*ami
 
 i_sun = 4.58
+m_hi = getHImass(title_string, dm)
 
 v_magr, g_magr, i_magr = np.loadtxt('/Users/wjanesh/projects/uchvc-tools/sdssBVR.dat', usecols=(4, 12, 16), unpack=True)
 good_g, good_i = np.loadtxt('/Users/wjanesh/projects/uchvc-tools/sdssBVR.dat', usecols=(21,23), dtype=bool, unpack=True)
@@ -312,33 +347,40 @@ print '# r g     ge   i     ie   g-i  err   Mg    Mi   MV    M/L  L*      M*    
 print >> f, '# r g     ge   i     ie   g-i  err   Mg    Mi   MV    M/L  L*      M*       HI/*'
 
 rs = np.array([45, 55, 65, 75, 85, 90, 45, 55, 65, 75, 85, 90])
-for i,r in enumerate(rs):
-    color_guess = 0.0
-    color_diff = 1.0
-    while abs(color_diff) > tolerance:
-    	g_cal = g_0[i] + eps_g*color_guess + zp_g
-    	i_cal = i_0[i] + eps_i*color_guess + zp_i
 
-    	color_new = g_cal - i_cal
-    	color_diff = color_guess-color_new
-    	color_guess = color_new
-    	# print g_0[i], g_cal, i_0[i], i_cal, color_new
-
-    g_mag = g_cal - cal_A_g
-    i_mag = i_cal - cal_A_i
-    gmi = g_mag - i_mag
-    e_gmi = np.sqrt(me_g[i]**2 + me_i[i]**2)
-    g_abs = g_mag-dm
-    i_abs = i_mag-dm
+with open('optical_props.txt', 'w+') as opt:
+    print '# ap     g   ge     i   ie  g-i Eg-i    Mg    Mi    MV  M/L      L*      MHI   M*  Hi/*'
+    print >> opt, '# ap     g   ge     i   ie  g-i Eg-i    Mg    Mi    MV  M/L      L*      MHI   M*  Hi/*'
+    for i,r in enumerate(rs):
+        color_guess = 0.0
+        color_diff = 1.0
+        while abs(color_diff) > tolerance:
+            g_cal = g_0[i] + eps_g*color_guess + zp_g
+            i_cal = i_0[i] + eps_i*color_guess + zp_i
     
-
-    mtol = np.power(10,0.518*gmi-0.152)
-    l_star = np.power(10,(i_sun-i_abs)/2.5)
-    m_star = l_star*mtol
-    hitostar = m_hi/m_star
-    v_mag = g_mag + fit(g_mag - i_mag)
-    v_abs = v_mag - dm
-    print '{:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:5.2f} {:4.2f} {:3.1e} {:3.1e} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,v_abs,mtol,l_star,m_star,hitostar)
-    print >> f, '{:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:5.2f} {:4.2f} {:3.1e} {:3.1e} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,v_abs,mtol,l_star,m_star,hitostar)
+            color_new = g_cal - i_cal
+            color_diff = color_guess-color_new
+            color_guess = color_new
+            # print g_0[i], g_cal, i_0[i], i_cal, color_new
+    
+        g_mag = g_cal - cal_A_g
+        i_mag = i_cal - cal_A_i
+        gmi = g_mag - i_mag
+        e_gmi = np.sqrt(me_g[i]**2 + me_i[i]**2)
+        g_abs = g_mag-dm
+        i_abs = i_mag-dm
+        
+        v_abs = getVabs(g_mag, i_mag, dm)
+        
+        mtol = np.power(10,0.518*gmi-0.152)
+        l_star = np.power(10,(i_sun-i_abs)/2.5)
+        m_star = l_star*mtol
+        hitostar = m_hi/m_star
+        print ' {:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:4.2f} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,v_abs,mtol,np.log10(l_star),np.log10(m_hi),np.log10(m_star),hitostar)
+        print >> opt, ' {:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:4.2f} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,v_abs,mtol,np.log10(l_star),np.log10(m_hi),np.log10(m_star),hitostar)
+# 
+for file_ in ["area.txdump","mag_area.dat","mag_est_g.dat","phot_region_g.txdump","mag_est_i.dat","phot_region_i.txdump"]:
+    os.remove(file_)
 
 f.close()
+
