@@ -8,6 +8,10 @@ import glob
 #######################
 # <<<<<<< HEAD
 path = os.getcwd()
+subpath = path+'/compl'
+compl = 'compl/'
+if not os.path.exists(subpath):
+    os.mkdir(subpath)
 steps = path.split('/')
 objname = steps[-1].upper()        # which should always exist in the directory
 # objname = 'HI1151+20'
@@ -28,7 +32,10 @@ for filter_ in filters_:
     
     # get the daofind parameters to match what we used in the actual call earlier
     # use the coordinate output file, it's all in there
-    coordFile = open(objname+'_'+filter_+'_sh.fits'+'.coo.1')
+    try:
+        coordFile = open(objname+'_'+filter_+'.fits'+'.coo.1')
+    except:
+        coordFile = open(objname+'_'+filter_+'_sh.fits'+'.coo.1')
     coord = coordFile.read()
     coordLines = coord.splitlines()
     
@@ -125,14 +132,14 @@ for filter_ in filters_:
     print >> cTable, "#   "
     
     for mag in inst_mags:
-        art_img = objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'.fits'
-        dao_coo = objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'.coo.1'
-        phot_out = objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'.mag.1'
-        art_coo = objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'.fits.art'
-        art_tab = objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'_art.tab'
-        phot_tab = objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'_phot.tab'
-        match_tab = objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'_tmatch.tab'
-        match_file = objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'_tmatch.tdump'
+        art_img = compl+objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'.fits'
+        dao_coo = compl+objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'.coo.1'
+        phot_out = compl+objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'.mag.1'
+        art_coo = compl+objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'.fits.art'
+        art_tab = compl+objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'_art.tab'
+        phot_tab = compl+objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'_phot.tab'
+        match_tab = compl+objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'_tmatch.tab'
+        match_file = compl+objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'_tmatch.tdump'
         next_mag = mag + step
         
         print 'adding stars'
