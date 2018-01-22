@@ -21,8 +21,8 @@ def main():
     path = os.getcwd()
     steps = path.split('/')
     objname = steps[-1].upper()
-    fits_g = objname+'_g.fits'
-    fits_i = objname+'_i.fits'
+    fits_g = objname+'_g_sh.fits'
+    fits_i = objname+'_i_sh.fits'
     
     # Define constants
     # extinction coefficients

@@ -16,7 +16,7 @@ iraf.imutil(_doprint=0)
 
 def getHImass(object, dm):
     uchvcdb = os.environ['HOME']+'/projects/uchvc-db/uchvc_hi_properties.txt'
-    name, mass = np.loadtxt(uchvcdb, usecols=(0,1), dtype=str, unpack=True)
+    name, mass = np.loadtxt(uchvcdb, usecols=(1,6), dtype=str, unpack=True)
     # find the right row
     coord = [i for i,this in enumerate(mass) if object.upper() in name[i]][0]
     print 'the HI mass of', name[coord], 'is', mass[coord], 'at 1 Mpc'
@@ -251,8 +251,8 @@ for r in rs:
     error_g = np.sqrt(np.sum(fluxes_g) / epadu + area_g * stdev_g**2 + area_g**2 * stdev_g**2 / nsky_g)
     merrs_g.append(1.0857 * error_g / np.sum(fluxes_g))
     
-    os.remove("mag_min_g.dat")
-    os.remove("mag_min_i.dat")
+    # os.remove("mag_min_g.dat")
+    # os.remove("mag_min_i.dat")
     os.remove("phot_indiv_g.txdump")
     os.remove("phot_indiv_i.txdump")
 

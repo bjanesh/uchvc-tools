@@ -8,21 +8,25 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.cm as cm
 import scipy.stats as ss
-from magfilter import deg2HMS, grid_smooth, getHIcentroid
+from collections import OrderedDict
+from magfilter import deg2HMS, grid_smooth, getHIcentroid, make_filter, filter_sources
 
 def main():
-    objects = ['AGC174540', 'AGC226067', 'AGC227987', 'AGC229326', 'AGC238713', 'AGC249282', 'AGC249323', 'AGC258242', 'AGC258459', 'AGC268074', 'HI1037+21', 'HI1050+23']
+    objects = OrderedDict([('AGC198511',25.30), ('AGC215417',22.72), ('HI1151+20',24.70), ('AGC238626',26.01), ('AGC249000',25.30), ('AGC249320',25.34), ('AGC249525',26.07), ('AGC258237',24.02), ('AGC268069',24.24)])
+    filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     
     # plt.clf()
-    fig = plt.figure(figsize=(10,7))
-    outer = gridspec.GridSpec(4,3, wspace=0.1, hspace=0.1)
-    for i, obj in enumerate(objects):
+    fig = plt.figure(figsize=(17,11))
+    outer = gridspec.GridSpec(3,3, wspace=0.1, hspace=0.1)
+    for i, obj in enumerate(objects.keys()):
         inner = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[i], wspace=0.1, hspace=0.1)
         # set up some filenames
         folder = '/Volumes/galileo/uchvc/targets/'+obj.lower()+'/'
         mag_file = folder+'calibrated_mags.dat'
         fits_file_i = folder+obj+'_i.fits'                  
         fits_i = fits.open(fits_file_i)
+        
+        dm = objects[obj]
         
         # read in magnitudes, colors, and positions(x,y)
         # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
@@ -97,7 +101,28 @@ def main():
         i_rad = [world[i,0] for i in range(len(world[:,0]))]
         i_decd = [world[i,1] for i in range(len(world[:,1]))]
         
-        xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra, i_dec, 2.0, width, height)
+        cm_filter, gi_iso, i_m_iso = make_filter(dm, filter_file)
+        stars_f = filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1)
+        
+        xy_points = zip(i_ra,i_dec)
+        
+        # make new vectors containing only the filtered points
+        
+        i_mag_f = [i_mag[i] for i in range(len(i_mag)) if (stars_f[i])]
+        g_mag_f = [g_mag[i] for i in range(len(i_mag)) if (stars_f[i])]
+        gmi_f = [gmi[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_ra_f = [i_ra[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_dec_f = [i_dec[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_rad_f = [i_rad[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_decd_f = [i_decd[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_x_f = [ix[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_y_f = [iy[i] for i in range(len(i_mag)) if (stars_f[i])]
+        fwhm_sf = [fwhm_s[i] for i in range(len(i_mag)) if (stars_f[i])]
+        n_in_filter = len(i_mag_f)
+        
+        xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, 2.0, width, height)
+        
+        # xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra, i_dec, 2.0, width, height)
         hi_c_ra, hi_c_dec = getHIcentroid(obj)
         hi_c_x, hi_c_y = abs((hi_c_ra-ra_corner)*60), abs((hi_c_dec-dec_corner)*60)
         cosd = lambda x : np.cos(np.deg2rad(x))
@@ -105,19 +130,23 @@ def main():
         hi_x_circ = [hi_c_x + pltsig*cosd(t) for t in range(0,359,1)]
         hi_y_circ = [hi_c_y + pltsig*sind(t) for t in range(0,359,1)]
         
+        x_circ = [yedges[y_cent] + 3.0*cosd(t) for t in range(0,359,1)]
+        y_circ = [xedges[x_cent] + 3.0*sind(t) for t in range(0,359,1)]
+        
         ax1 = plt.Subplot(fig, inner[0])
         if os.path.isfile(folder+'i_gmi_compl.gr.out'):
             gmiCompl, iCompl = np.loadtxt(folder+'i_gmi_compl.gr.out',usecols=(0,1),unpack=True)
             ax1.plot(gmiCompl,iCompl, linestyle='--', color='green')
-        if os.path.isfile(folder+'i_gmi_compl.gr2.out'):
-            gmiCompl, iCompl = np.loadtxt(folder+'i_gmi_compl.gr2.out',usecols=(0,1),unpack=True)
-            ax1.plot(gmiCompl,iCompl, linestyle='--', color='red')
-        if os.path.isfile(folder+'i_gmi_compl2.out'):
-            iCompl,gmiCompl = np.loadtxt(folder+'i_gmi_compl2.out',usecols=(0,1),unpack=True)
-            ax1.plot(gmiCompl,iCompl, linestyle='--', color='blue')
+        # if os.path.isfile(folder+'i_gmi_compl.gr2.out'):
+        #     gmiCompl, iCompl = np.loadtxt(folder+'i_gmi_compl.gr2.out',usecols=(0,1),unpack=True)
+        #     ax1.plot(gmiCompl,iCompl, linestyle='--', color='red')
+        # if os.path.isfile(folder+'i_gmi_compl2.out'):
+        #     iCompl,gmiCompl = np.loadtxt(folder+'i_gmi_compl2.out',usecols=(0,1),unpack=True)
+        #     ax1.plot(gmiCompl,iCompl, linestyle='--', color='blue')
         
+        ax1.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
         ax1.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
-        # plt.scatter(gmi_c, i_mag_c,  color='red', marker='o', s=3, edgecolors='none')
+        ax1.scatter(gmi_f, i_mag_f,  color='red', marker='o', s=15, edgecolors='none')
         ax1.errorbar(bxvals, bcenters, xerr=i_ierrAVG, yerr=gmi_errAVG, linestyle='None', color='black', capsize=0, ms=0)
         ax1.tick_params(axis='y',left='on',right='off',labelleft='on',labelright='off')
         ax1.yaxis.set_label_position('left')
@@ -136,20 +165,24 @@ def main():
         # cbar_S = plt.colorbar()
         # cbar_S.set_label('$\sigma$ from local mean')
         ax2.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
+        ax2.plot(x_circ,y_circ,linestyle='-', color='magenta')
         ax2.tick_params(axis='y',left='off',right='on',labelleft='off',labelright='on')
         ax2.yaxis.set_label_position('right')
         ax2.set_xticks([0,5,10,15,20])
         ax2.set_yticks([0,5,10,15,20])
         ax2.set_xlabel('RA (arcmin)')
         ax2.set_ylabel('Dec (arcmin)')
-        ax2.set_title(obj, size='small')
+        if obj.startswith('H'):
+            ax2.set_title('AGC219656', size='small')
+        else:
+            ax2.set_title(obj, size='small')
         ax2.set_xlim(0,max(i_ra))
         ax2.set_ylim(0,max(i_dec))
         ax2.set_aspect('equal')
         fig.add_subplot(ax2)
         
     outer.tight_layout(fig)
-    plt.savefig('non-detections.pdf')
+    plt.savefig('detections.pdf')
         
     pass
 
