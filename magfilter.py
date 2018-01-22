@@ -177,7 +177,7 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     # print 'Number of bins above S_th: {0:4d}'.format(len(above_th))
     return xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl 
 
-def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
+def distfit(n,dists,title,width,height,fwhm,dm,samples=100):
     from scipy.stats import lognorm
 
     bins_h = int(height * 60. / 8.)
@@ -225,7 +225,31 @@ def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
         # plt.show()
         plt.savefig('{:s}_{:5.2f}_{:3.1f}_dist.pdf'.format(title,dm,fwhm))
         
-    return pct
+    return pct, bins, centers
+    
+# def association(ra, dec, a, b, phi):
+#     from scipy.stats import multivariate_normal
+#     mu = [0, 0]
+#     
+#     rot = [[np.cosd(phi), -1*np.sind(phi)],
+#            [np.sind(phi), np.cosd(phi)]]
+#     e1 = rot*[a, 0]
+#     e2 = rot*[0, b]
+#     
+#     cov = a * ((e1 * e1)/())
+#     
+#     # cov = [[2.0, 0.3], [0.3, 0.5]]
+#     
+#     
+#     x, y = np.mgrid[-1:1:.01, -1:1:.01]
+#     pos = np.empty(x.shape + (2,))
+#     pos[:, :, 0] = x; pos[:, :, 1] = y
+#     rv = multivariate_normal(mu, cov)
+#     plt.contourf(x, y, rv.pdf(pos))
+#     
+#     
+#     
+#     return pct
     
 def main(argv):
     home_root = os.environ['HOME']
@@ -403,11 +427,15 @@ def main(argv):
         f1.close()
     
     if dm2 and filter_string != 'none':
-        dms = np.arange(dm,dm2,0.02)
+        dms = np.arange(dm,dm2,0.1)
     else:
         dms = [dm]
 
     search = open('search.txt','w+')
+    
+    sig_bins = []
+    sig_cens = []
+    sig_max = []
     
     for dm in dms:
         mpc = pow(10,((dm + 5.)/5.))/1000000.
@@ -441,9 +469,14 @@ def main(argv):
         n_in_filter = len(i_mag_f)
         
         xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm, width, height)
-        pct = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm)
-        if pct > 95 :
-            pct = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm, samples=25000)
+        pct, d_bins, d_cens = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm)
+        
+        sig_bins.append(d_bins)
+        sig_cens.append(d_cens)
+        sig_max.append(S[x_cent_S][y_cent_S])
+        
+        if pct > 100 :
+            pct, bj,cj = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm, samples=25000)
         
         # make a circle to highlight a certain region
         cosd = lambda x : np.cos(np.deg2rad(x))
@@ -510,7 +543,7 @@ def main(argv):
         
         # print 'max i mag in circle = ', min(i_mag_fc)
         
-        rs = np.array([45, 55, 65, 75, 85, 90,180])
+        rs = np.array([45, 55, 65, 75, 85, 90, 180])
         for r in rs:    
             x_circ = [yedges[y_cent] + r/60.*cosd(t) for t in range(0,359,1)]
             y_circ = [xedges[x_cent] + r/60.*sind(t) for t in range(0,359,1)]
@@ -747,7 +780,26 @@ def main(argv):
             pp.close()
         # else :
             # print 'detection at dm='+repr(dm)+' not significant enough to look at plots'
-    search.close()    
+    search.close()   
+    
+    # make the overall significance plot
+    
+    print len(dms), len(sig_cens)
+    
+    plt.clf()
+    plt.figure()
+    
+    plt.contourf(sig_bins, 4, cmap=plt.cm.Reds, extent=(22, 27, 1, 6))#, origin=origin)
+    plt.plot(sig_max, dms, linestyle='-', color='black')
+    
+    plt.ylabel('$\sigma$')
+    plt.xlabel('distance modulus')
+    plt.xlim(22,27)
+    plt.ylim(1,6)
+    # plt.clim(-1,8)
+    
+    plt.savefig('signif.pdf')
+     
     if imexam_flag :
         from pyraf import iraf
         iraf.unlearn(iraf.tv.imexamine, iraf.rimexam)
