@@ -17,15 +17,18 @@ try :
 except ImportError :
     print 'bad import'
     
-def getHIcentroid(object):
+def getHIellipse(object, ra_corner, dec_corner):
     from astropy import units as u
     from astropy.coordinates import SkyCoord
     uchvcdb = os.path.dirname(os.path.abspath(__file__))+'/predblist.sort.csv'
-    name, coords = np.loadtxt(uchvcdb, usecols=(1,2), dtype=str, delimiter=',', unpack=True)
+    name, coords, ar, br, par = np.loadtxt(uchvcdb, usecols=(1,2,14,15,16), dtype=str, delimiter=',', unpack=True)
     # print object
     # find the right row
     coord = [this for i,this in enumerate(coords) if object.upper() in name[i]][0]
-    
+    a = [this for i,this in enumerate(ar) if object.upper() in name[i]][0]
+    b = [this for i,this in enumerate(br) if object.upper() in name[i]][0]
+    pa = [this for i,this in enumerate(par) if object.upper() in name[i]][0]
+
     # parse the coordinate into a better string
     rah = coord[0:2]
     ram = coord[2:4]
@@ -39,7 +42,25 @@ def getHIcentroid(object):
     coord_hi = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
     ra_hi = coord_hi.ra.deg
     dec_hi = coord_hi.dec.deg
-    return ra_hi, dec_hi
+    
+    cosd = lambda x : np.cos(np.deg2rad(x))
+    sind = lambda x : np.sin(np.deg2rad(x))
+    
+    hi_c_x, hi_c_y = abs((ra_hi-ra_corner)*60), abs((dec_hi-dec_corner)*60)
+    
+    a, b, pa = a.astype(float)/2., b.astype(float)/2., -pa.astype(float)
+    
+    t = np.array(range(0,359,1))
+    ell = np.array([a*cosd(t) , b*sind(t)])
+    rot = np.array([[cosd(pa) , -sind(pa)],[sind(pa) , cosd(pa)]])
+    ell_rot = np.zeros((2,ell.shape[1]))
+    for i in range(ell.shape[1]):
+        ell_rot[:,i] = np.dot(rot,ell[:,i])
+    hi_x_circ, hi_y_circ = hi_c_x+ell_rot[0,:], hi_c_y+ell_rot[1,:]
+    # hi_x_circ = [hi_c_x + a*cosd(t) for t in range(0,359,1)]
+    # hi_y_circ = [hi_c_y + b*sind(t) for t in range(0,359,1)]
+
+    return hi_x_circ, hi_y_circ
     
 def dist2HIcentroid(ra, dec, ra_hi, dec_hi):
     from astropy import units as u
@@ -177,7 +198,7 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     # print 'Number of bins above S_th: {0:4d}'.format(len(above_th))
     return xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl 
 
-def distfit(n,dists,title,width,height,fwhm,dm,samples=100):
+def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
     from scipy.stats import lognorm
 
     bins_h = int(height * 60. / 8.)
@@ -427,7 +448,7 @@ def main(argv):
         f1.close()
     
     if dm2 and filter_string != 'none':
-        dms = np.arange(dm,dm2,0.1)
+        dms = np.arange(dm,dm2,0.01)
     else:
         dms = [dm]
 
@@ -783,22 +804,26 @@ def main(argv):
     search.close()   
     
     # make the overall significance plot
-    
-    print len(dms), len(sig_cens)
-    
-    plt.clf()
-    plt.figure()
-    
-    plt.contourf(sig_bins, 4, cmap=plt.cm.Reds, extent=(22, 27, 1, 6))#, origin=origin)
-    plt.plot(sig_max, dms, linestyle='-', color='black')
-    
-    plt.ylabel('$\sigma$')
-    plt.xlabel('distance modulus')
-    plt.xlim(22,27)
-    plt.ylim(1,6)
-    # plt.clim(-1,8)
-    
-    plt.savefig('signif.pdf')
+    if len(dms) > 1 :
+        print len(dms), len(sig_cens)
+        
+        plt.clf()
+        plt.figure(10,4)
+        
+        # print sig_bins
+        # print sig_max
+        # print dms
+        
+        plt.imshow(np.transpose(sig_bins), cmap=plt.cm.Reds, extent=(22, 27, 22, 2))#, origin=origin)
+        plt.plot(dms, sig_max, linestyle='-', color='black', lw=0.5)
+        # plt.colorbar()
+        plt.ylabel('$\sigma$')
+        plt.xlabel('distance modulus')
+        plt.xlim(22,27)
+        plt.ylim(2,6.5)
+        # plt.clim(0,1.5)
+        
+        plt.savefig('significance_'+title_string+'.pdf')
      
     if imexam_flag :
         from pyraf import iraf
