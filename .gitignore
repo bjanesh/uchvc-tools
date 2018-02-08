@@ -1,2 +1,4 @@
 *.pyc
 *.fits
+*search.txt
+*.pdf

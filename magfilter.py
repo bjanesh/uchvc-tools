@@ -17,7 +17,7 @@ try :
 except ImportError :
     print 'bad import'
     
-def getHIellipse(object, ra_corner, dec_corner):
+def getHIellipse(object, ra_corner, dec_corner, centroid=False):
     from astropy import units as u
     from astropy.coordinates import SkyCoord
     uchvcdb = os.path.dirname(os.path.abspath(__file__))+'/predblist.sort.csv'
@@ -59,8 +59,10 @@ def getHIellipse(object, ra_corner, dec_corner):
     hi_x_circ, hi_y_circ = hi_c_x+ell_rot[0,:], hi_c_y+ell_rot[1,:]
     # hi_x_circ = [hi_c_x + a*cosd(t) for t in range(0,359,1)]
     # hi_y_circ = [hi_c_y + b*sind(t) for t in range(0,359,1)]
-
-    return hi_x_circ, hi_y_circ
+    if centroid:
+        return ra_hi, dec_hi
+    else:
+        return hi_x_circ, hi_y_circ
     
 def dist2HIcentroid(ra, dec, ra_hi, dec_hi):
     from astropy import units as u
@@ -140,7 +142,7 @@ def filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1):
             cm_points_r = [(gmi[i]+0.01*j*gmi_err[i],i_mag[i]) for j in range(nsteps_color)]
             cm_points_u = [(gmi[i],i_mag[i]-0.01*j*i_ierr[i]) for j in range(nsteps_mag)]
             cm_points_d = [(gmi[i],i_mag[i]+0.01*j*i_ierr[i]) for j in range(nsteps_mag)]
-                    
+
             # check if the errorbar points fall in the filter        
             stars_f_l = cm_filter.contains_points(cm_points_l)        
             stars_f_r = cm_filter.contains_points(cm_points_r)        
@@ -247,6 +249,25 @@ def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
         plt.savefig('{:s}_{:5.2f}_{:3.1f}_dist.pdf'.format(title,dm,fwhm))
         
     return pct, bins, centers
+
+def dm_sigplot(dms, sig_bins, sig_max, title_string):    
+        plt.clf()
+        plt.figure(10,4)
+        
+        # print sig_bins
+        # print sig_max
+        # print dms
+        
+        plt.imshow(np.transpose(sig_bins), cmap=plt.cm.Reds, extent=(22, 27, 22, 2))#, origin=origin)
+        plt.plot(dms, sig_max, linestyle='-', color='black', lw=0.5)
+        # plt.colorbar()
+        plt.ylabel('$\sigma$')
+        plt.xlabel('distance modulus')
+        plt.xlim(22,27)
+        plt.ylim(2,6.5)
+        # plt.clim(0,1.5)
+        
+        plt.savefig('significance_'+title_string+'.pdf')
     
 # def association(ra, dec, a, b, phi):
 #     from scipy.stats import multivariate_normal
@@ -804,26 +825,8 @@ def main(argv):
     search.close()   
     
     # make the overall significance plot
-    if len(dms) > 1 :
-        print len(dms), len(sig_cens)
-        
-        plt.clf()
-        plt.figure(10,4)
-        
-        # print sig_bins
-        # print sig_max
-        # print dms
-        
-        plt.imshow(np.transpose(sig_bins), cmap=plt.cm.Reds, extent=(22, 27, 22, 2))#, origin=origin)
-        plt.plot(dms, sig_max, linestyle='-', color='black', lw=0.5)
-        # plt.colorbar()
-        plt.ylabel('$\sigma$')
-        plt.xlabel('distance modulus')
-        plt.xlim(22,27)
-        plt.ylim(2,6.5)
-        # plt.clim(0,1.5)
-        
-        plt.savefig('significance_'+title_string+'.pdf')
+    if len(dms) > 1 :        
+        dm_sigplot(dms, sig_bins, sig_max, title_string)
      
     if imexam_flag :
         from pyraf import iraf
