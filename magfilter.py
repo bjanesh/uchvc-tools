@@ -634,11 +634,8 @@ def main(argv):
         ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=False)
         # print 'Peak RA:',ra_c_d,':: Peak Dec:',dec_c_d
         
-        hi_c_ra, hi_c_dec = getHIcentroid(title_string)
-        hi_c_x, hi_c_y = abs((hi_c_ra-ra_corner)*60), abs((hi_c_dec-dec_corner)*60)
-        hi_x_circ = [hi_c_x + pltsig*cosd(t) for t in range(0,359,1)]
-        hi_y_circ = [hi_c_y + pltsig*sind(t) for t in range(0,359,1)]
-        
+        hi_x_circ, hi_y_circ = getHIellipse(title_string, ra_corner, dec_corner)
+        hi_c_ra, hi_c_dec = getHIellipse(title_string, ra_corner, dec_corner, centroid=True)        
         hi_pix_x,hi_pix_y = w.wcs_world2pix(hi_c_ra,hi_c_dec,1)
         
         sep = dist2HIcentroid(ra_c_d, dec_c_d, hi_c_ra, hi_c_dec)
@@ -732,7 +729,7 @@ def main(argv):
             plt.scatter(i_ra, i_dec,  color='black', marker='o', s=1, edgecolors='none')
             plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
             plt.plot(x_circr,y_circr,linestyle='-', color='gold')
-            plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
+            plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='limegreen')
             # plt.scatter(i_ra_c, i_dec_c,  color='red', marker='o', s=3, edgecolors='none')
             plt.scatter(i_ra_f, i_dec_f,  c='red', marker='o', s=10, edgecolors='none')
             # plt.clim(0,2)
@@ -780,7 +777,7 @@ def main(argv):
             # cbar_S.tick_params(labelsize=10)
             plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
             plt.plot(x_circr,y_circr,linestyle='-', color='gold')
-            plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
+            plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='limegreen')
             # X, Y = np.meshgrid(xedges,yedges)
             # ax3.pcolormesh(X,Y,grid_gaus)
             plt.xlabel('RA (arcmin)')
