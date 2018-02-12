@@ -63,6 +63,92 @@ def getHIellipse(object, ra_corner, dec_corner, centroid=False):
         return ra_hi, dec_hi
     else:
         return hi_x_circ, hi_y_circ
+
+def rotateImage(img, angle, pivot):
+    padX = [img.shape[1] - pivot[0], pivot[0]]
+    padY = [img.shape[0] - pivot[1], pivot[1]]
+    imgP = np.pad(img, [padY, padX], 'constant')
+    imgR = ndimage.rotate(imgP, angle, order=5, reshape=False)
+    return imgR[padY[0] : -padY[1], padX[0] : -padX[1]]
+    
+def getHIcoincidence(x, y, object, ra_corner, dec_corner, height, width, dm):
+    from astropy import units as u
+    from astropy.coordinates import SkyCoord
+    import matplotlib.colors as colors
+    uchvcdb = os.path.dirname(os.path.abspath(__file__))+'/predblist.sort.csv'
+    name, coords, ar, br, par = np.loadtxt(uchvcdb, usecols=(1,2,14,15,16), dtype=str, delimiter=',', unpack=True)
+    # print object
+    # find the right row
+    coord = [this for i,this in enumerate(coords) if object.upper() in name[i]][0]
+    a = [this for i,this in enumerate(ar) if object.upper() in name[i]][0]
+    b = [this for i,this in enumerate(br) if object.upper() in name[i]][0]
+    pa = [this for i,this in enumerate(par) if object.upper() in name[i]][0]
+    
+    # parse the coordinate into a better string
+    rah = coord[0:2]
+    ram = coord[2:4]
+    ras = coord[4:8]
+    ded = coord[8:11]
+    dem = coord[11:13]
+    des = coord[13:15]
+    
+    ra = rah+':'+ram+':'+ras
+    dec = ded+':'+dem+':'+des
+    coord_hi = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
+    ra_hi = coord_hi.ra.deg
+    dec_hi = coord_hi.dec.deg
+    
+    cosd = lambda x : np.cos(np.deg2rad(x))
+    sind = lambda x : np.sin(np.deg2rad(x))
+    
+    hi_c_x, hi_c_y = np.zeros(1), np.zeros(1)
+    
+    hi_c_x[0], hi_c_y[0] = abs((ra_hi-ra_corner)*60), abs((dec_hi-dec_corner)*60)
+    
+    a, b, pa = a.astype(float)/2., b.astype(float)/2., -pa.astype(float)
+    
+    t = np.array(range(0,359,1))
+    ell = np.array([a*cosd(t) , b*sind(t)])
+    rot = np.array([[cosd(pa) , -sind(pa)],[sind(pa) , cosd(pa)]])
+    ell_rot = np.zeros((2,ell.shape[1]))
+    for i in range(ell.shape[1]):
+        ell_rot[:,i] = np.dot(rot,ell[:,i])
+    hi_x_circ, hi_y_circ = hi_c_x[0]+ell_rot[0,:], hi_c_y[0]+ell_rot[1,:]
+
+    # x_dist = np.random.multivariate_normal((hi_c_x, hi_c_y), cov, 10000) 
+     
+    bins_h = int(height * 60. / 8.)
+    bins_w = int(width * 60. / 8.)
+    grid, xedges, yedges = np.histogram2d(hi_c_y, hi_c_x, bins=[bins_h,bins_w], range=[[0,height],[0,width]], normed=True) 
+    xcenters = (xedges[:-1] + xedges[1:])/2.
+    ycenters = (yedges[:-1] + yedges[1:])/2.
+    # find the pivot point for the rotation == the HI centroid pixel from the histogram
+    pivot = np.unravel_index(grid.argmax(),grid.shape)
+    
+    # convolve the single point with a 2d gaussian w/ a, b as axis ratios
+    grid_gaus = ndimage.filters.gaussian_filter(grid, sigma=((bins_w/width)*2.*a/2.355, (bins_w/width)*2.*b/2.355), mode='nearest', cval=0)
+    
+    # rotate the image with the correct pivot point
+    grid_rot = rotateImage(grid_gaus/np.amax(grid_gaus), pa, [pivot[-1], pivot[0]])
+    
+    plt.clf()
+    plt.figure(figsize=(5.5,5))
+    bounds = np.linspace(0, 1, 11)
+    norm = colors.BoundaryNorm(boundaries=bounds, ncolors=256)
+    
+    extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
+    gr = plt.imshow(grid_rot, norm=norm, extent=extent, interpolation='nearest')
+    plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='limegreen')
+    plt.scatter(ycenters[y], xcenters[x], c='red')
+    plt.xlim(0,20)
+    plt.ylim(0,20)
+    plt.xlabel('RA (arcmin)')
+    plt.ylabel('Dec (arcmin)')
+    plt.title('{:s} @ dm = {:5.2f} : {:6.3f}%'.format(object, dm, grid_rot[x][y]*100.))
+    plt.colorbar(gr, orientation='vertical')
+    plt.savefig('{:s}_{:5.2f}_coinc.pdf'.format(object,dm))
+    
+    return grid_rot[x][y]    
     
 def dist2HIcentroid(ra, dec, ra_hi, dec_hi):
     from astropy import units as u
@@ -425,7 +511,7 @@ def main(argv):
     ra_corner, dec_corner = w.all_pix2world(0,0,1)
     ra_c_d,dec_c_d = deg2HMS(ra=ra_corner, dec=dec_corner, round=True)
     # print 'Corner RA:',ra_c_d,':: Corner Dec:',dec_c_d
-    
+        
     fwhm_i = 12.0 #fits_i[0].header['FWHMPSF']
     fwhm_g = 9.0 # fits_g[0].header['FWHMPSF']
     
@@ -512,6 +598,7 @@ def main(argv):
         
         xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm, width, height)
         pct, d_bins, d_cens = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm)
+        pct_hi = getHIcoincidence(x_cent_S, y_cent_S, title_string, ra_corner, dec_corner, width, height, dm)
         
         sig_bins.append(d_bins)
         sig_cens.append(d_cens)
@@ -644,8 +731,8 @@ def main(argv):
         # print ra_c, dec_c
         # print hi_c_ra, hi_c_dec
         
-        print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)
-        print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)        
+        print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}% | η = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.)
+        print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.)        
 
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
         #iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no') 
