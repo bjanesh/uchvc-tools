@@ -25,7 +25,7 @@ nartstars = 100
 # threshold = 3.5
 #######################
 for filter_ in filters_:
-    full_img = objname+'_'+filter_+'_sh.fits'
+    full_img = objname+'_'+filter_+'.fits'
     img = objname+'_'+filter_+'_crop.fits'
     full_psf = full_img+'.psf.1.fits'
     psf_img = objname+'_'+filter_+'_crop.psf.1.fits'
