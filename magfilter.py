@@ -131,22 +131,23 @@ def getHIcoincidence(x, y, object, ra_corner, dec_corner, height, width, dm):
     # rotate the image with the correct pivot point
     grid_rot = rotateImage(grid_gaus/np.amax(grid_gaus), pa, [pivot[-1], pivot[0]])
     
-    plt.clf()
-    plt.figure(figsize=(5.5,5))
-    bounds = np.linspace(0, 1, 11)
-    norm = colors.BoundaryNorm(boundaries=bounds, ncolors=256)
-    
-    extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
-    gr = plt.imshow(grid_rot, norm=norm, extent=extent, interpolation='nearest')
-    plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='limegreen')
-    plt.scatter(ycenters[y], xcenters[x], c='red')
-    plt.xlim(0,20)
-    plt.ylim(0,20)
-    plt.xlabel('RA (arcmin)')
-    plt.ylabel('Dec (arcmin)')
-    plt.title('{:s} @ dm = {:5.2f} : {:6.3f}%'.format(object, dm, grid_rot[x][y]*100.))
-    plt.colorbar(gr, orientation='vertical')
-    plt.savefig('{:s}_{:5.2f}_coinc.pdf'.format(object,dm))
+    if grid_rot[x][y] > 0.9:
+        plt.clf()
+        plt.figure(figsize=(5.5,5))
+        bounds = np.linspace(0, 1, 11)
+        norm = colors.BoundaryNorm(boundaries=bounds, ncolors=256)
+        
+        extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
+        gr = plt.imshow(grid_rot, norm=norm, extent=extent, interpolation='nearest')
+        plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='limegreen')
+        plt.scatter(ycenters[y], xcenters[x], c='red')
+        plt.xlim(0,20)
+        plt.ylim(0,20)
+        plt.xlabel('RA (arcmin)')
+        plt.ylabel('Dec (arcmin)')
+        plt.title('{:s} @ dm = {:5.2f} : {:6.3f}%'.format(object, dm, grid_rot[x][y]*100.))
+        plt.colorbar(gr, orientation='vertical')
+        plt.savefig('{:s}_{:5.2f}_coinc.pdf'.format(object,dm))
     
     return grid_rot[x][y]    
     
@@ -439,7 +440,7 @@ def main(argv):
             fits_file_g = file_
               
     fits_i = fits.open(fits_file_i)
-    fits_g = fits.open(fits_file_g)
+    # fits_g = fits.open(fits_file_g)
     # print "Opened fits files:",fits_file_g,"&",fits_file_i
     
     # objid = fits_i[0].header['OBJECT']
@@ -518,7 +519,7 @@ def main(argv):
     # print 'Image FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i)
     
     fits_i.close()
-    fits_g.close()
+    # fits_g.close()
     
     # split the ra and dec out into individual arrays and transform to arcmin from the corner
     i_ra = [abs((world[i,0]-ra_corner)*60) for i in range(len(world[:,0]))]
