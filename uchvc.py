@@ -156,7 +156,7 @@ print 'Image header FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i)
 # bgm_i = fits_h_i[0].header['SKY_MEDI']
 # bgm_g = fits_h_g[0].header['SKY_MEDI']
 
-bgm_g, bg_g, cen = bkg_boxes(fits_g, 1000, 20.0, sources=True)
+bgm_g, bg_g, cen = bkg_boxes(fits_g, 1000, 10.0, sources=True)
 bgm_i, bg_i, cen = bkg_boxes(fits_i, 1000, 10.0, sources=True)
 
 # bg_g = np.mean(bgsig_g)
@@ -315,8 +315,8 @@ iraf.digiphot.mkobsfile.setParam('photfiles',title_string+'_*.fits.mag.1a')
 iraf.digiphot.mkobsfile.setParam('idfilters','odi_i,odi_g')
 iraf.digiphot.mkobsfile.setParam('imsets',title_string+'.imsets')
 iraf.digiphot.mkobsfile.setParam('obscolumns','2 3 4 5')
-iraf.digiphot.mkobsfile.setParam('shifts',None)
-iraf.digiphot.mkobsfile.setParam('apercors',None)
+iraf.digiphot.mkobsfile.setParam('shifts','')
+iraf.digiphot.mkobsfile.setParam('apercors','')
 iraf.digiphot.mkobsfile.setParam('allfilters','yes')
 
 # if not os.path.isfile('ifirst_tol6.out') :
