@@ -13,6 +13,44 @@ from escut_new import escut
 from rand_bkg import bkg_boxes
 from odi_calibrate import calibrate, js_calibrate, download_sdss
 
+def getfwhm(image, coords, outputfile, radius=4.0, buff=7.0, width=5.0, rplot=15.0, center='yes'):
+    '''
+    Get a fwhm estimate for the image using the SDSS catalog stars and IRAF imexam (SLOW, but works)
+    Adapted from Kathy's getfwhm script (this implementation is simpler in practice)
+    '''
+    from pyraf import iraf
+    import numpy as np
+    import os
+    
+    iraf.tv.rimexam.setParam('radius',radius)
+    iraf.tv.rimexam.setParam('buffer',buff)
+    iraf.tv.rimexam.setParam('width',width)
+    iraf.tv.rimexam.setParam('rplot',rplot)
+    iraf.tv.rimexam.setParam('center',center)
+    # fit a gaussian, rather than a moffat profile (it's more robust for faint sources)
+    iraf.tv.rimexam.setParam('fittype','gaussian')
+    iraf.tv.rimexam.setParam('iterati',1)
+    
+    if not os.path.isfile(outputfile):
+        iraf.tv.imexamine(image, frame=10, logfile = outputfile, keeplog = 'yes', defkey = "a", nframes=0, imagecur = coords, wcs = "logical", use_display='no',  StdoutG='/dev/null',mode='h')
+    outputfile_clean = open(outputfile.replace('.log','_clean.log'),"w")
+    for line in open(outputfile,"r"):
+        if not 'INDEF' in line:
+            outputfile_clean.write(line)
+        if 'INDEF' in line:
+            outputfile_clean.write(line.replace('INDEF','999'))
+    outputfile_clean.close()
+    os.rename(outputfile.replace('.log','_clean.log'),outputfile)
+    #
+    # # unfortunately we have to toss the first measured fwhm value from the median because of the file format
+    # # gfwhm = np.genfromtxt(outputfile, usecols=(3,), skip_header=4, skip_footer=3, unpack=True)
+    gfwhm = np.loadtxt(outputfile, usecols=(10,), unpack=True)
+    # hdulist = ast.io.fits.open(image)
+    # seeing = hdulist[0].header['FWHMSTAR']
+    # gfwhm = seeing/0.11
+    print 'median gwfhm in ',image+': ',np.median(gfwhm),'pixels'# (determined via QR)'
+    return np.median(gfwhm)
+
 home_root = os.environ['HOME']
 funpack_path = home_root+'/bin/funpack'
 iraf.images(_doprint=0)
@@ -23,6 +61,8 @@ iraf.digiphot(_doprint=0)
 iraf.photcal(_doprint=0)
 iraf.apphot(_doprint=0)  
 iraf.imutil(_doprint=0)
+
+threshold = float(sys.argv[1])
 
 # check to see if files have been unpacked
 unpacked = False
@@ -115,9 +155,13 @@ fits_h_g = fits.open(fits_g)
 try:
     fwhm_i = fits_h_i[0].header['FWHMPSF']
     fwhm_g = fits_h_g[0].header['FWHMPSF']
+    xdim = fits_h_i[0].header['NAXIS1']
+    ydim = fits_h_i[0].header['NAXIS2']
 except:
     fwhm_i = fits_h_i[0].header['SEEING']/0.11
     fwhm_g = fits_h_g[0].header['SEEING']/0.11
+    xdim = fits_h_i[0].header['NAXIS1']
+    ydim = fits_h_i[0].header['NAXIS2']
 
 print 'Target Coordinates :: ',fits_h_i[0].header['RA'],fits_h_i[0].header['DEC']
 print 'Image header FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i)
@@ -173,7 +217,7 @@ if not os.path.isfile(fits_g+'.coo.1') :
     iraf.datapars.setParam('fwhmpsf',fwhm_g,check=1)
     iraf.datapars.setParam('sigma',bg_g,check=1)
     
-    iraf.findpars.setParam('threshold',3.0)
+    iraf.findpars.setParam('threshold',threshold)
     iraf.apphot.daofind(image=fits_g, verbose="no", verify="no")
 #     
 #     # i image
@@ -181,7 +225,7 @@ if not os.path.isfile(fits_i+'.coo.1') :
     iraf.datapars.setParam('fwhmpsf',fwhm_i,check=1)
     iraf.datapars.setParam('sigma',bg_i,check=1)
     
-    iraf.findpars.setParam('threshold',3.0)
+    iraf.findpars.setParam('threshold',threshold)
     iraf.apphot.daofind(image=fits_i, verbose="no", verify="no")
 
 #         # now pull out all the sources with 4x background -- let sextractor measure that for us
@@ -351,27 +395,32 @@ if len(glob.glob('tol*.pos')) < 2:
         match_pos_file_i.close()
     
 # import the getfwhm task as a pyraf task
-iraf.task(getfwhm = "home$scripts/getfwhm.cl")
+# iraf.task(getfwhm = "home$scripts/getfwhm.cl")
 # print iraf.getfwhm.getCode()
 
 # you might want to remeasure the FWHMs to get a better global estimate now that we (should) only have good sources in the image
 # use getfwhm, which is just a loop on imexam. (try to improve this with ralf's qr code)
-if not os.path.isfile('getfwhm_g.log') :
-    iraf.unlearn(iraf.imexamine, iraf.rimexam)
-    iraf.getfwhm.setParam('images',fits_g)
-    iraf.getfwhm.setParam('coordlist','tol7_g.pos')
-    iraf.getfwhm.setParam('outfile','getfwhm_g.log')
-    iraf.getfwhm.setParam('center','no')
-    iraf.imexamine.setParam('frame',1)
-    iraf.getfwhm(mode='h')
+# if not os.path.isfile('getfwhm_g.log') :
+#     iraf.unlearn(iraf.imexamine, iraf.rimexam)
+#     iraf.getfwhm.setParam('images',fits_g)
+#     iraf.getfwhm.setParam('coordlist','tol7_g.pos')
+#     iraf.getfwhm.setParam('outfile','getfwhm_g.log')
+#     iraf.getfwhm.setParam('center','no')
+#     iraf.imexamine.setParam('frame','1')
+#     iraf.imexamine.setParam('use_display','no')
+#     iraf.getfwhm(mode='h')
+# 
+# if not os.path.isfile('getfwhm_i.log') :
+#     iraf.getfwhm.setParam('images',fits_i)
+#     iraf.getfwhm.setParam('coordlist','tol7_i.pos')
+#     iraf.getfwhm.setParam('outfile','getfwhm_i.log')
+#     iraf.getfwhm.setParam('center','no')
+#     iraf.imexamine.setParam('frame','2')
+#     iraf.imexamine.setParam('use_display','no')
+#     iraf.getfwhm(mode='h')
 
-if not os.path.isfile('getfwhm_i.log') :
-    iraf.getfwhm.setParam('images',fits_i)
-    iraf.getfwhm.setParam('coordlist','tol7_i.pos')
-    iraf.getfwhm.setParam('outfile','getfwhm_i.log')
-    iraf.getfwhm.setParam('center','no')
-    iraf.imexamine.setParam('frame',2)
-    iraf.getfwhm(mode='h')
+fwhmchk_g = getfwhm(fits_g, 'tol7_g.pos', 'getfwhm_g.log')
+fwhmchk_i = getfwhm(fits_i, 'tol7_i.pos', 'getfwhm_i.log')
     
 # determine the aperture correction needed--this is actually an extremely important step. uses 4.5x the measured FWHM as the aperture DATA DEPENDENT 
 if not os.path.isfile('apcor.tbl.txt'):
@@ -389,9 +438,9 @@ if not os.path.isfile('apcor.tbl.txt'):
     
     # print ap_cand1_g
     if fwhm_g < 20.0 and fwhm_i < 20.0 :
-        ap_cand_g = [ap_cand1_g[i] for i in range(len(ap_cand1_g)) if (10000. < ap_cand1_g[i][3] < 50000.)]
-        print ap_cand_g
-        ap_cand_i = [ap_cand1_i[i] for i in range(len(ap_cand1_i)) if (20000. < ap_cand1_i[i][3] < 50000.)]
+        ap_cand_g = [ap_cand1_g[i] for i in range(len(ap_cand1_g)) if (10000. < ap_cand1_g[i][3] < 50000. and 100.0 < ap_gx[i] < xdim-100.0 and 100.0 < ap_gy[i] < ydim-100.0)]
+        # print ap_cand_g
+        ap_cand_i = [ap_cand1_i[i] for i in range(len(ap_cand1_i)) if (10000. < ap_cand1_i[i][3] < 50000. and 100.0 < ap_gx[i] < xdim-100.0 and 100.0 < ap_gy[i] < ydim-100.0)]
         # print ap_cand_g
         ap_avg_g1 = np.mean([ap_cand_g[i][2] for i in range(len(ap_cand_g))])
         ap_avg_i1 = np.mean([ap_cand_i[i][2] for i in range(len(ap_cand_i))])
@@ -679,7 +728,7 @@ nid,gx,gy,g_i,g_ierr,ix,iy,i_i,i_ierr = np.loadtxt('calibration.dat',usecols=(0,
 g0 = g_i - (kg*amg) + apcor_g 
 i0 = i_i - (ki*ami) + apcor_i
 
-download_sdss(fits_g, fits_i, gmaglim = 22.0)
+# download_sdss(fits_g, fits_i, gmaglim = 22.0)
 eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = fits_g, img2 = fits_i)
 
 # use the instrumental magnitude and initial color guess to ITERATE 
