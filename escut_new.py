@@ -157,13 +157,22 @@ def escut(image, pos_file, fwhm, peak):
     #     for i,blah in enumerate(xCut):
     #         print >> f, xCut[i], yCut[i], diffCut[i]
             
-    bin_meds, bin_edges, binnumber = stats.binned_statistic(magCut, diffCut, statistic='median', bins=24, range=(magCut.min(),magCut.max()))
-    bin_stds, bin_edges, binnumber = stats.binned_statistic(magCut, diffCut, statistic=np.std, bins=24, range=(magCut.min(),magCut.max()))
+    bin_meds, bin_edges, binnumber = stats.binned_statistic(magCut, diffCut, statistic='median', bins=24, range=(-12,0))
+    bin_stds, bin_edges, binnumber = stats.binned_statistic(magCut, diffCut, statistic=np.std, bins=24, range=(-12,0))
     bin_width = (bin_edges[1] - bin_edges[0])
     bin_centers = bin_edges[1:] - bin_width/2
     # print bin_meds, bin_stds
-
-    bin_hw = 3.0*bin_stds
+    bin_hw = np.zeros_like(bin_stds)
+    for i, bin_std in enumerate(bin_stds):
+        if bin_std > 0.025:
+            bin_hw[i] = 3.0*bin_std
+        else:
+            bin_hw[i] = 0.075
+    
+    # print len(binnumber)
+    # for i,bin_hwi in enumerate(bin_hw):
+        
+    
     left_edge = np.array(zip(peakVal-bin_hw, bin_centers))
     right_edge = np.flipud(np.array(zip(peakVal+bin_hw, bin_centers)))
     # print left_edge, right_edge
@@ -171,6 +180,7 @@ def escut(image, pos_file, fwhm, peak):
     # print verts
     # verts = np.delete(verts, np.array([0,1,2,22,23,24,25,45,46,47]), axis=0)
     
+    # DON'T USE A PATH BECAUSE APPARENTLY IT CAN SELECT THE INVERSE SET!! WTF
     # print verts
     esRegion = Path(verts)
     sources = esRegion.contains_points(zip(diff,mag2x))
@@ -240,5 +250,49 @@ def escut(image, pos_file, fwhm, peak):
     
     return fwhmCut[keep]
 
-# image = "AGC174540_i_sh.fits"
-# escut(image, )
+def main():
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import os
+    import matplotlib.gridspec as gridspec
+    
+    path = os.getcwd()
+    steps = path.split('/')
+    title_string = steps[-1].upper()
+    # image = "AGC174540_i_sh.fits"
+    # escut(image, )
+    # objects = ["AGC122834", "AGC174540", "AGC198511", "AGC198606", "AGC215417", "AGC226067", "AGC227987", "AGC229326", "AGC238626", "AGC238713", "AGC249000", "AGC249282", "AGC249320", "AGC249323", "AGC249525", "AGC258237", "AGC258242", "AGC258459", "AGC268069", "AGC268074", "HI0932+24", "HI0959+19", "HI1037+21", "HI1050+23", "HI1134+20", "HI1151+20"]
+    # # fig = plt.figure(figsize=(10,7))
+    # # outer = gridspec.GridSpec(4,3, wspace=0.1, hspace=0.1)
+    # for i, obj in enumerate(objects.keys()):
+    #     print obj
+        # inner = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=outer[i], wspace=0.1, hspace=0.1)
+        # set up some filenames
+    # folder = '/Volumes/galileo/uchvc/targets/'+obj.lower()+'/'
+    apc_file = 'apcor.tbl.txt'
+    fits_i = title_string+'_i.fits'       
+    
+    apcor, apcor_std, apcor_sem = np.loadtxt(apc_file, usecols=(0,1,2), unpack=True)
+    apcor_g = apcor[0]
+    apcor_i = apcor[1]
+    apcor_std_g = apcor_std[0]
+    apcor_std_i = apcor_std[1]
+    apcor_sem_g = apcor_sem[0]
+    apcor_sem_i = apcor_sem[1]
+    print 'Aperture correction :: g = {0:7.4f} : i = {1:7.4f}'.format(apcor_g,apcor_i)
+    print 'Aperture corr. StD. :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_std_g,apcor_std_i)
+    print 'Aperture corr. SEM  :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_sem_g,apcor_sem_i)
+    
+    ap_ix,ap_iy = np.loadtxt('getfwhm_i.log',usecols=(0,1),unpack=True)
+    ap_mag_i = np.loadtxt('getfwhm_i.log',usecols=(5,),dtype=str,unpack=True)
+    ap_peak_i = np.loadtxt('getfwhm_i.log',usecols=(8,),dtype=str,unpack=True)
+    ap_fwhm_i = np.loadtxt('getfwhm_i.log',usecols=(12,),dtype=str,unpack=True)
+    good = np.where(ap_fwhm_i!='INDEF')
+    fwhm_good = ap_fwhm_i[good].astype(float)
+    ap_avg_i = np.median(fwhm_good)
+    
+    escut_i = escut(fits_i, 'tol7_i.pos', ap_fwhm_i, ap_peak_i)
+
+if __name__ == '__main__':
+    main()
+
