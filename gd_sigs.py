@@ -16,6 +16,9 @@ def main():
     objects = OrderedDict([('AGC198511',25.30), ('AGC215417',22.72), ('HI1151+20',24.70), ('AGC238626',26.01), ('AGC249000',25.30), ('AGC249320',25.34), ('AGC249525',26.07), ('AGC258237',24.02), ('AGC268069',24.24), ('AGC198606',22.89), ('HI0959+19',23.08)])
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     
+    fwhm_sm = 2.0
+    fwhm_sm_string = '2.0'
+    
     # plt.clf()
     fig = plt.figure(figsize=(10,7))
     outer = gridspec.GridSpec(4,3, wspace=0.1, hspace=0.1)
@@ -103,13 +106,13 @@ def main():
         i_rad = [world[i,0] for i in range(len(world[:,0]))]
         i_decd = [world[i,1] for i in range(len(world[:,1]))]
         
-        search = open(obj+'_search.txt','w+')
+        search = open(obj+'_search'+fwhm_sm_string+'.txt','w+')
         
         sig_bins = []
         sig_cens = []
         sig_max = []
         
-        dms = np.arange(22.0,26.99,0.01)
+        dms = np.arange(22.0,26.99,0.1)
         
         for dm in dms:
             mpc = pow(10,((dm + 5.)/5.))/1000000.
@@ -134,12 +137,18 @@ def main():
             fwhm_sf = [fwhm_s[i] for i in range(len(i_mag)) if (stars_f[i])]
             n_in_filter = len(i_mag_f)
             
-            xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, 2.0, width, height)
-            pct, d_bins, d_cens = distfit(n_in_filter,S[x_cent_S][y_cent_S],obj,width,height,2.0,dm)
+            xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm_sm, width, height)
+            pct, d_bins, d_cens = distfit(n_in_filter,S[x_cent_S][y_cent_S],obj,width,height,fwhm_sm,dm)
             
             sig_bins.append(d_bins)
             sig_cens.append(d_cens)
             sig_max.append(S[x_cent_S][y_cent_S])
+            
+            circ_c_x = ra_corner-(yedges[y_cent]/60.)
+            circ_c_y = (xedges[x_cent]/60.)+dec_corner
+            circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
+            ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
+            ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=False)
             
             hi_c_ra, hi_c_dec = getHIellipse(obj, ra_corner, dec_corner, centroid=True)
             sep = dist2HIcentroid(ra_c_d, dec_c_d, hi_c_ra, hi_c_dec)
