@@ -24,11 +24,11 @@ def main(argv):
 	# print "Getting fits files..."
 	# Load the FITS header using astropy.io.fits
 	for file_ in os.listdir("./"):
-		if file_.endswith("i_sh.fits"):
+		if file_.endswith("i.fits"):
 			fits_file_i = file_
 
  	for file_ in os.listdir("./"):
- 		if file_.endswith("g_sh.fits"):
+ 		if file_.endswith("g.fits"):
  			fits_file_g = file_
 
 	fits_i = fits.open(fits_file_i)
@@ -154,8 +154,8 @@ def main(argv):
 	# make a circle to highlight a certain region
 	cosd = lambda x : np.cos(np.deg2rad(x))
 	sind = lambda x : np.sin(np.deg2rad(x))
-	x_circ = [yedges[y_cent] + pltsig*cosd(t) for t in range(0,359,1)]
-	y_circ = [xedges[x_cent] + pltsig*sind(t) for t in range(0,359,1)]
+	x_circ = [yedges[y_cent] + 3.0*cosd(t) for t in range(0,359,1)]
+	y_circ = [xedges[x_cent] + 3.0*sind(t) for t in range(0,359,1)]
 	xy_points = zip(i_ra,i_dec)
 	verts_circ = zip(x_circ,y_circ)
 	circ_filter = Path(verts_circ)
@@ -180,25 +180,25 @@ def main(argv):
 	# for i in range(len(i_x_fc)) :
 	# 	print (i_x_fc[i],i_y_fc[i])
 
-	circ_c_x = (yedges[y_cent]/60.)+ra_c
-	circ_c_y = (xedges[x_cent]/60.)+dec_c
-	circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
+	# circ_c_x = (yedges[y_cent]/60.)+ra_c
+	# circ_c_y = (xedges[x_cent]/60.)+dec_c
+	# circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
+	# 
+	# hi_c_ra, hi_c_dec = 142.5104167, 16.6355556
+	# hi_c_x, hi_c_y = abs((hi_c_ra-ra_c)*60), abs((hi_c_dec-dec_c)*60)
+	# hi_x_circ = [hi_c_x + pltsig*cosd(t) for t in range(0,359,1)]
+	# hi_y_circ = [hi_c_y + pltsig*sind(t) for t in range(0,359,1)]
+	# 
+	# hi_pix_x,hi_pix_y = w.wcs_world2pix(hi_c_ra,hi_c_dec,1)
 
-	hi_c_ra, hi_c_dec = 142.5104167, 16.6355556
-	hi_c_x, hi_c_y = abs((hi_c_ra-ra_c)*60), abs((hi_c_dec-dec_c)*60)
-	hi_x_circ = [hi_c_x + pltsig*cosd(t) for t in range(0,359,1)]
-	hi_y_circ = [hi_c_y + pltsig*sind(t) for t in range(0,359,1)]
-
-	hi_pix_x,hi_pix_y = w.wcs_world2pix(hi_c_ra,hi_c_dec,1)
-
-	center_file = 'im_cens_'+fwhm_string+'.dat'
-	im_cens = open(center_file,'w+')
-	print >> im_cens, -circ_pix_x, circ_pix_y, 'circle_center'
-	print >> im_cens, hi_pix_x, hi_pix_y, 'HI_centroid'
-	im_cens.close()
-
-	mark_radius = int(pltsig*60/0.11)
-	mark_radii = str(repr(mark_radius-2)+','+repr(mark_radius-1)+','+repr(mark_radius)+','+repr(mark_radius+1)+','+repr(mark_radius+2))
+	# center_file = 'im_cens_'+fwhm_string+'.dat'
+	# im_cens = open(center_file,'w+')
+	# print >> im_cens, -circ_pix_x, circ_pix_y, 'circle_center'
+	# print >> im_cens, hi_pix_x, hi_pix_y, 'HI_centroid'
+	# im_cens.close()
+	# 
+	# mark_radius = int(pltsig*60/0.11)
+	# mark_radii = str(repr(mark_radius-2)+','+repr(mark_radius-1)+','+repr(mark_radius)+','+repr(mark_radius+1)+','+repr(mark_radius+2))
 
 	# if disp_flag :
 	# 	iraf.unlearn(iraf.tv.tvmark)
@@ -221,9 +221,10 @@ def main(argv):
 	# plot
 	# print "Plotting for m-M = ",dm
 	ax0 = plt.subplot(2,2,1)
-	plt.scatter(i_ra, i_dec,  color=gmi, marker='o', s=(27-np.array(i_mag)), edgecolors='none', cmap=cm.rainbow)
+	plt.scatter(i_ra, i_dec,  c=gmi, marker='o', s=(27-np.array(i_mag)), edgecolors='none', cmap=cm.rainbow)
 	plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
-	plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
+	plt.clim(-1,4)
+	# plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
 	plt.colorbar()
 	# plt.scatter(i_ra_c, i_dec_c,  color='red', marker='o', s=3, edgecolors='none')
 	plt.ylabel('Dec (arcmin)')
@@ -233,8 +234,8 @@ def main(argv):
 	ax0.set_aspect('equal')
 
 	ax1 = plt.subplot(2,2,2)
-	plt.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
-	plt.scatter(gmi_c, i_mag_c,  color='red', marker='o', s=3, edgecolors='none')
+	plt.scatter(gmi, i_mag,  c='black', marker='o', s=1, edgecolors='none')
+	plt.scatter(gmi_c, i_mag_c,  c='red', marker='o', s=3, edgecolors='none')
 	plt.tick_params(axis='y',left='on',right='off',labelleft='on',labelright='off')
 	ax1.yaxis.set_label_position('left')
 	plt.ylabel('$i$')
@@ -245,11 +246,11 @@ def main(argv):
 	ax2 = plt.subplot(2,2,3)
 
 	extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
-	plt.imshow(S, extent=extent, interpolation='nearest', cmap=cm.cubehelix)
+	plt.imshow(S, extent=extent, interpolation='nearest', cmap=cm.viridis)
 	cbar_S = plt.colorbar()
 	# cbar_S.tick_params(labelsize=10)
 	plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
-	plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
+	# plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='black')
 	# X, Y = np.meshgrid(xedges,yedges)
 	# ax3.pcolormesh(X,Y,grid_gaus)
 	plt.xlabel('RA (arcmin)')
@@ -294,21 +295,21 @@ def main(argv):
 	# 
 	# pp.close()
 
-	if imexam_flag :
-		iraf.unlearn(iraf.tv.imexamine, iraf.rimexam)
-		iraf.tv.rimexam.setParam('radius',int(fwhm_i))
-		iraf.tv.rimexam.setParam('rplot',12.)
-		iraf.tv.rimexam.setParam('fittype','gaussian')
-		iraf.tv.rimexam.setParam('center','yes')
-		iraf.tv.imexamine(input=fits_file_i, frame=2)
-
-	# clean up
-	if os.path.isfile(center_file) :
-		os.remove(center_file)
-	if os.path.isfile(mark_file) :
-		os.remove(mark_file)
-	if os.path.isfile(circ_file) :
-		os.remove(circ_file)
+	# if imexam_flag :
+	# 	iraf.unlearn(iraf.tv.imexamine, iraf.rimexam)
+	# 	iraf.tv.rimexam.setParam('radius',int(fwhm_i))
+	# 	iraf.tv.rimexam.setParam('rplot',12.)
+	# 	iraf.tv.rimexam.setParam('fittype','gaussian')
+	# 	iraf.tv.rimexam.setParam('center','yes')
+	# 	iraf.tv.imexamine(input=fits_file_i, frame=2)
+	# 
+	# # # clean up
+	# # if os.path.isfile(center_file) :
+	# # 	os.remove(center_file)
+	# # if os.path.isfile(mark_file) :
+	# # 	os.remove(mark_file)
+	# # if os.path.isfile(circ_file) :
+	# # 	os.remove(circ_file)
 
 def deg2HMS(ra='', dec='', round=False):
   RA, DEC, rs, ds = '', '', '', ''
