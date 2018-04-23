@@ -52,7 +52,7 @@ def write_header(ofp,pre,url,qry):
     for l in qry.split('\n'):
         ofp.write('%s   %s\n' % (pre,l))
 
-def download_sdss(img1, img2, gmaglim = 21):
+def download_sdss(img1, img2, gmaglim = 21, gmagbrlim = 16):
     try: 
         import sys
         import numpy as np
@@ -174,7 +174,7 @@ def download_sdss(img1, img2, gmaglim = 21):
 
     # keep things that are actually stars (defined as being psf's) and with the right magnitude range (arbitrary)
 
-    keep_stars = ((probPSF == 1) & (psfMag_g < gmaglim))
+    keep_stars = ((probPSF == 1) & (psfMag_g < gmaglim) & (psfMagErr_g <0.1) & (psfMag_g > gmagbrlim))
     print 'keeping', len(np.where(keep_stars)[0]), 'stars of', len(psfMag_g), 'sources'
     
     # then write out separate files for g and i
@@ -376,6 +376,9 @@ def calibrate(img1 = None, img2 = None, podicut = 0.03, sdsscut = 0.03):
 
     # read in the the SDSS catalog values
     x, y, ra, dec, u, ue, g, ge, r, re, i, ie, z, ze = np.loadtxt(img1[0:-5]+'.sdssxy', usecols=(0,1,2,3,4,5,6,7,8,9,10,11,12,13), unpack=True)
+    
+    print "  x gID iID fw1 fw2   k  kg  ki"
+    print len(x), len(gID), len(iID), len(col1), len(col2), len(keep), len(keepg), len(keepi)
 
     # pick out the ones that match the good phot stars
     g, ge, r, re, i, ie, peak1, peak2, gfwhm1, gfwhm2 = np.array(g[keep]), np.array(ge[keep]), np.array(r[keep]), np.array(re[keep]), np.array(i[keep]), np.array(ie[keep]), np.array(peak1[keep]), np.array(peak2[keep]), np.array(gfwhm1[keep]), np.array(gfwhm2[keep])
@@ -735,41 +738,41 @@ def js_calibrate(img1 = None, img2 = None, podicut = 0.03, sdsscut = 0.03, verbo
     # print 'pyraf thinks its in', os.getcwd()
     # now phot each image with the individual params
     # use txdump to put things in a nicer format for reading in
-    if not os.path.isfile(img1[0:-5]+'_cal.sdssphot'): # only do this once
+    if not os.path.isfile(img1[0:-5]+'_cal_js.sdssphot'): # only do this once
         print 'phot-ing the g image, this might take a while...'
         iraf.datapars.setParam('fwhmpsf',fwhm1)
         iraf.photpars.setParam('apertures',5.*fwhm1) # use a big aperture for this
         iraf.fitskypars.setParam('annulus',6.*fwhm1)
-        iraf.apphot.phot(image=img1, coords=img1[0:-5]+'.sdssxy', output=img1[0:-5]+'_cal.phot.1')
-        with open(img1[0:-5]+'_cal.sdssphot','w+') as txdump_out :
-            iraf.ptools.txdump(textfiles=img1[0:-5]+'_cal.phot.1', fields="id,mag,merr,msky,stdev,rapert,xcen,ycen,ifilter,xairmass,image", expr='MAG != INDEF && MERR != INDEF', headers='no', Stdout=txdump_out)
+        iraf.apphot.phot(image=img1, coords=img1[0:-5]+'.sdssxy', output=img1[0:-5]+'_cal_js.phot.1')
+        with open(img1[0:-5]+'_cal_js.sdssphot','w+') as txdump_out :
+            iraf.ptools.txdump(textfiles=img1[0:-5]+'_cal_js.phot.1', fields="id,mag,merr,msky,stdev,rapert,xcen,ycen,ifilter,xairmass,image", expr='MAG != INDEF && MERR != INDEF', headers='no', Stdout=txdump_out)
     
-    if not os.path.isfile(img2[0:-5]+'_cal.sdssphot'):
+    if not os.path.isfile(img2[0:-5]+'_cal_js.sdssphot'):
         print 'phot-ing the r/i image, this might take a while...'
         iraf.datapars.setParam('fwhmpsf',fwhm2)
         iraf.photpars.setParam('apertures',5.*fwhm2) # use a big aperture for this
         iraf.fitskypars.setParam('annulus',6.*fwhm2)
-        iraf.apphot.phot(image=img2, coords=img2[0:-5]+'.sdssxy', output=img2[0:-5]+'_cal.phot.1')
-        with open(img2[0:-5]+'_cal.sdssphot','w+') as txdump_out :
-            iraf.ptools.txdump(textfiles=img2[0:-5]+'_cal.phot.1', fields="id,mag,merr,msky,stdev,rapert,xcen,ycen,ifilter,xairmass,image", expr='MAG != INDEF && MERR != INDEF', headers='no', Stdout=txdump_out)
+        iraf.apphot.phot(image=img2, coords=img2[0:-5]+'.sdssxy', output=img2[0:-5]+'_cal_js.phot.1')
+        with open(img2[0:-5]+'_cal_js.sdssphot','w+') as txdump_out :
+            iraf.ptools.txdump(textfiles=img2[0:-5]+'_cal_js.phot.1', fields="id,mag,merr,msky,stdev,rapert,xcen,ycen,ifilter,xairmass,image", expr='MAG != INDEF && MERR != INDEF', headers='no', Stdout=txdump_out)
     
     # read in getfwhm logs
     col1, line1, rmag1, flux1, sky1, n1, rmom1, ellip1, pa1, peak1, gfwhm1 = np.loadtxt(img1[0:-5]+'_fwhmCAL.log', usecols=(0,1,2,3,4,5,6,7,8,9,10), dtype=float, unpack=True)
     col2, line2, rmag2, flux2, sky2, n2, rmom2, ellip2, pa2, peak2, gfwhm2 = np.loadtxt(img2[0:-5]+'_fwhmCAL.log', usecols=(0,1,2,3,4,5,6,7,8,9,10), dtype=float, unpack=True)
     
     # read in the phot output as a string because we need to get rid of the indefs
-    gMAG, gMERR, gSKY, gSERR, gRAPERT, gXPOS, gYPOS = np.loadtxt(img1[0:-5]+'_cal.sdssphot', usecols=(1,2,3,4,5,6,7), dtype=float, unpack=True)
-    iMAG, iMERR, iSKY, iSERR, iRAPERT, iXPOS, iYPOS = np.loadtxt(img2[0:-5]+'_cal.sdssphot', usecols=(1,2,3,4,5,6,7), dtype=float, unpack=True)
+    gMAG, gMERR, gSKY, gSERR, gRAPERT, gXPOS, gYPOS = np.loadtxt(img1[0:-5]+'_cal_js.sdssphot', usecols=(1,2,3,4,5,6,7), dtype=float, unpack=True)
+    iMAG, iMERR, iSKY, iSERR, iRAPERT, iXPOS, iYPOS = np.loadtxt(img2[0:-5]+'_cal_js.sdssphot', usecols=(1,2,3,4,5,6,7), dtype=float, unpack=True)
     
     # get some auxiliary info from the phot output
-    gXAIRMASS = np.loadtxt(img1[0:-5]+'_cal.sdssphot', usecols=(9,), dtype=str, unpack=True)
-    iXAIRMASS = np.loadtxt(img2[0:-5]+'_cal.sdssphot', usecols=(9,), dtype=str, unpack=True)
+    gXAIRMASS = np.loadtxt(img1[0:-5]+'_cal_js.sdssphot', usecols=(9,), dtype=str, unpack=True)
+    iXAIRMASS = np.loadtxt(img2[0:-5]+'_cal_js.sdssphot', usecols=(9,), dtype=str, unpack=True)
     
-    gFILTER = np.loadtxt(img1[0:-5]+'_cal.sdssphot', usecols=(8,), dtype=str, unpack=True)
-    iFILTER = np.loadtxt(img2[0:-5]+'_cal.sdssphot', usecols=(8,), dtype=str, unpack=True)
+    gFILTER = np.loadtxt(img1[0:-5]+'_cal_js.sdssphot', usecols=(8,), dtype=str, unpack=True)
+    iFILTER = np.loadtxt(img2[0:-5]+'_cal_js.sdssphot', usecols=(8,), dtype=str, unpack=True)
     
-    gID = np.loadtxt(img1[0:-5]+'_cal.sdssphot', usecols=(0,), dtype=int, unpack=True)
-    iID = np.loadtxt(img2[0:-5]+'_cal.sdssphot', usecols=(0,), dtype=int, unpack=True)
+    gID = np.loadtxt(img1[0:-5]+'_cal_js.sdssphot', usecols=(0,), dtype=int, unpack=True)
+    iID = np.loadtxt(img2[0:-5]+'_cal_js.sdssphot', usecols=(0,), dtype=int, unpack=True)
     
     # keep the actual ID number to select from SDSS stars
     # need to do this because we already dropped INDEFs
