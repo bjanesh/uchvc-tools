@@ -251,13 +251,18 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     # width = 30
     bins_h = int(height * 60. / 8.)
     bins_w = int(width * 60. / 8.)
+    # print bins_h, bins_w
+    density = float(len(i_ra_f))/(float(bins_h)*float(bins_w))
     
     grid, xedges, yedges = np.histogram2d(i_dec_f, i_ra_f, bins=[bins_h,bins_w], range=[[0,height],[0,width]])
     hist_points = zip(xedges,yedges)
 
     sig = ((bins_w/width)*fwhm)/2.355
+    sig3 = ((bins_w/width)*3.0)/2.355
     pltsig = fwhm/2.0
-
+    pgrid_mean = np.mean(grid)
+    pgrid_sigma = np.std(grid)
+    
     # convolve the grid with a gaussian
     grid_gaus = ndimage.filters.gaussian_filter(grid, sig, mode='constant', cval=0)
     S = np.array(grid_gaus*0)
@@ -266,6 +271,7 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     grid_mean = np.mean(grid_gaus)
     grid_sigma = np.std(grid_gaus)
     S = (grid_gaus-grid_mean)/grid_sigma
+    
     
     above_th = [(int(i),int(j)) for i in range(len(S)) for j in range(len(S[i])) if (S[i][j] >= S_th)]
     
@@ -285,6 +291,8 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     # print 'Max of S located at:','('+'{0:6.3f}'.format(y_cent_S)+','+'{0:6.3f}'.format(x_cent_S)+')'
     # print 'Value of S at above:','{0:6.3f}'.format(S[x_cent_S][y_cent_S])
     # print 'Number of bins above S_th: {0:4d}'.format(len(above_th))
+    # print density, pgrid_mean, pgrid_sigma, grid_mean, grid_sigma, x_cent, y_cent
+    
     return xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl 
 
 def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
@@ -385,7 +393,7 @@ def main(argv):
     # set defaults for command line flags
     imexam_flag = False
     disp_flag = False
-    fwhm = 2.0
+    fwhm = 3.0
     fwhm_string = repr(fwhm)
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     filter_string = 'old'
@@ -599,7 +607,7 @@ def main(argv):
         
         xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm, width, height)
         pct, d_bins, d_cens = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm)
-        pct_hi = getHIcoincidence(x_cent_S, y_cent_S, title_string, ra_corner, dec_corner, width, height, dm)
+        pct_hi = 0.0 #getHIcoincidence(x_cent_S, y_cent_S, title_string, ra_corner, dec_corner, width, height, dm)
         
         sig_bins.append(d_bins)
         sig_cens.append(d_cens)
@@ -738,10 +746,10 @@ def main(argv):
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
         #iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no') 
         if pct > 90.:
-            with open(ds9_file,'w+') as ds9:
-                print >> ds9, "fk5;circle({:s},{:s},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr)
-                print >> ds9, "fk5;circle({:s},{:s},2') # color=magenta width=2 label=detection".format(ra_c, dec_c)
-                print >> ds9, "fk5;circle({:f},{:f},0.5') # color=black width=2 label=HI".format(hi_c_ra, hi_c_dec)
+            # with open(ds9_file,'w+') as ds9:
+            #     print >> ds9, "fk5;circle({:f},{:f},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr)
+            #     print >> ds9, "fk5;circle({:f},{:f},2') # color=magenta width=2 label=detection".format(ra_c, dec_c)
+            #     print >> ds9, "fk5;circle({:f},{:f},0.5') # color=black width=2 label=HI".format(hi_c_ra, hi_c_dec)
             
             f1 = open(filter_reg, 'w+')
             for i in range(len(i_x_f)) :
