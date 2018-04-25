@@ -345,7 +345,7 @@ def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
         
     return pct, bins, centers
 
-def dm_sigplot(dms, sig_bins, sig_max, title_string):    
+def dm_sigplot(dms, sig_bins, sig_max, fwhm, title_string):    
         plt.clf()
         plt.figure(10,4)
         
@@ -362,7 +362,7 @@ def dm_sigplot(dms, sig_bins, sig_max, title_string):
         plt.ylim(2,6.5)
         # plt.clim(0,1.5)
         
-        plt.savefig('significance_'+title_string+'.pdf')
+        plt.savefig('significance_{:s}_{:3.1f}.pdf'.format(title_string,fwhm))
     
 # def association(ra, dec, a, b, phi):
 #     from scipy.stats import multivariate_normal
@@ -393,20 +393,20 @@ def main(argv):
     # set defaults for command line flags
     imexam_flag = False
     disp_flag = False
-    fwhm = 3.0
-    fwhm_string = repr(fwhm)
+    # fwhm = 3.0
+    # fwhm_string = repr(fwhm)
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     filter_string = 'old'
     dm2 = None
     
     try:
-        opts, args = getopt.getopt(argv,"h",["imexam","disp","fwhm","dm=","dm2=","filter"])
+        opts, args = getopt.getopt(argv,"h",["fwhm=","dm=","dm2="])
     except getopt.GetoptError:
-        print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --disp=(yes/no)'
+        print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --dm=<DM in mag>'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --disp=(yes/no)'
+            print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --dm=<DM in mag>'
             sys.exit()
         elif opt in ("--fwhm"):
             fwhm = float(arg)        # in arcmin (7.5 pixels = 1 arcmin)
@@ -568,7 +568,7 @@ def main(argv):
     else:
         dms = [dm]
 
-    search = open('search.txt','w+')
+    search = open('search_{:3.1f}.txt'.format(fwhm),'w+')
     
     sig_bins = []
     sig_cens = []
@@ -919,7 +919,7 @@ def main(argv):
     
     # make the overall significance plot
     if len(dms) > 1 :        
-        dm_sigplot(dms, sig_bins, sig_max, title_string)
+        dm_sigplot(dms, sig_bins, sig_max, fwhm, title_string)
      
     if imexam_flag :
         from pyraf import iraf
