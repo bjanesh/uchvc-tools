@@ -119,9 +119,10 @@ kg = 0.200
 ki = 0.058
 
 # make sure there's a help file first
+if not os.path.isfile(title_string+'_i.sdssxy'):
+    download_sdss(fits_g, fits_i)
 if not os.path.isfile(title_string+'_help.txt'):
     # from uchvc_cal import download_sdss, calibrate
-    download_sdss(fits_g, fits_i)
     meh = calibrate(img1=fits_g, img2=fits_i)
 
 
