@@ -183,10 +183,10 @@ def main():
         ax2.set_yticks([0,5,10,15,20])
         ax2.set_xlabel('RA (arcmin)')
         ax2.set_ylabel('Dec (arcmin)')
-        if obj.startswith('HI1151'):
-            ax2.set_title('AGC219656', size='small')
-        else:
-            ax2.set_title(obj, size='small')
+        # if obj.startswith('HI1151'):
+        #     ax2.set_title('AGC219656', size='small')
+        # else:
+        ax2.set_title(obj, size='small')
         ax2.set_xlim(0,max(i_ra))
         ax2.set_ylim(0,max(i_dec))
         ax2.set_aspect('equal')

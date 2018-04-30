@@ -112,7 +112,7 @@ def main():
         sig_cens = []
         sig_max = []
         
-        dms = np.arange(22.0,26.99,0.1)
+        dms = np.arange(22.0,27.0,0.1)
         
         for dm in dms:
             mpc = pow(10,((dm + 5.)/5.))/1000000.
