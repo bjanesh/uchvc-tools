@@ -390,7 +390,8 @@ def calibrate(img1 = None, img2 = None, podicut = 0.03, sdsscut = 0.03):
     if gXAIRMASS[0] != 'INDEF':
         gXAIRMASS, iXAIRMASS = gXAIRMASS.astype(float)[0], iXAIRMASS.astype(float)[0]
     else:
-        gXAIRMASS, iXAIRMASS = 1.054, 1.075
+        raise Exception
+        #gXAIRMASS, iXAIRMASS = 1.054, 1.075
     gRAPERT, iRAPERT = gRAPERT[0], iRAPERT[0]
 
     # apply airmass extinction correction to instrumental magnitudes
