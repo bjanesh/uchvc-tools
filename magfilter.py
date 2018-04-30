@@ -295,7 +295,7 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     
     return xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl 
 
-def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
+def distfit(n,dists,title,width,height,fwhm,dm,samples=100):
     from scipy.stats import lognorm
 
     bins_h = int(height * 60. / 8.)
@@ -327,7 +327,7 @@ def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
     pct = 100.0*lognorm.cdf(dists, al, loc=loc, scale=beta)
     # print 'Significance of detection:','{0:6.3f}%'.format(pct)
 
-    if samples > 10000 and pct > 95.:
+    if samples > 10001 and pct > 95.:
         plt.clf()
         plt.figure(figsize=(9,4))
         plt.plot(x, lognorm.pdf(x, al, loc=loc, scale=beta),'r-', lw=2, alpha=0.6, label='lognormal distribution')
@@ -347,13 +347,13 @@ def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
 
 def dm_sigplot(dms, sig_bins, sig_max, fwhm, title_string):    
         plt.clf()
-        plt.figure(10,4)
+        plt.figure(figsize=(9,4))
         
         # print sig_bins
         # print sig_max
         # print dms
         
-        plt.imshow(np.transpose(sig_bins), cmap=plt.cm.Reds, extent=(22, 27, 22, 2))#, origin=origin)
+        plt.imshow(np.transpose(sig_bins), cmap=plt.cm.Reds, extent=(22, 27, 22, 2), aspect='auto')#, origin=origin)
         plt.plot(dms, sig_max, linestyle='-', color='black', lw=0.5)
         # plt.colorbar()
         plt.ylabel('$\sigma$')
@@ -388,55 +388,7 @@ def dm_sigplot(dms, sig_bins, sig_max, fwhm, title_string):
 #     
 #     return pct
     
-def main(argv):
-    home_root = os.environ['HOME']
-    # set defaults for command line flags
-    imexam_flag = False
-    disp_flag = False
-    # fwhm = 3.0
-    # fwhm_string = repr(fwhm)
-    filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
-    filter_string = 'old'
-    dm2 = None
-    
-    try:
-        opts, args = getopt.getopt(argv,"h",["fwhm=","dm=","dm2="])
-    except getopt.GetoptError:
-        print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --dm=<DM in mag>'
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == '-h':
-            print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --dm=<DM in mag>'
-            sys.exit()
-        elif opt in ("--fwhm"):
-            fwhm = float(arg)        # in arcmin (7.5 pixels = 1 arcmin)
-            fwhm_string = arg        # this is the smoothing scale, not a stellar profile
-        elif opt in ("--dm"):
-            dm = float(arg)        # in mag
-            dm_string = arg
-        elif opt in ("--dm2"):
-            dm2 = float(arg)
-        elif opt in ("--imexam"):
-            imexam_flag = True
-        elif opt in ("--disp"):
-            disp = arg        # in mag
-            if disp == 'yes' :
-                disp_flag = True
-            else :
-                disp_flag = False
-        elif opt in ("--filter"):
-            filt = arg
-            if arg == 'old' :
-                filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
-                filter_string = 'old'
-            elif arg == 'none':
-                filter_file = 'none'
-                filter_string = 'none'
-            else: 
-                filter_file = os.path.dirname(os.path.abspath(__file__))+'/iso_filter.txt'
-                filter_string = 'iso'
-    
-    fwhm_string = fwhm_string.replace('.','_')
+def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=0.0):
     # print "Getting fits files..."
     # Load the FITS header using astropy.io.fits
     for file_ in os.listdir("./"):
@@ -563,12 +515,12 @@ def main(argv):
             print >> f1, '{0:12.4f} {1:12.4f} {2:10.5f} {3:9.5f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(ixRed[i],iyRed[i], i_radRed[i], i_decdRed[i], g_magRed[i], i_magRed[i], g_magRed[i]-i_magRed[i])
         f1.close()
     
-    if dm2 and filter_string != 'none':
+    if dm2 > 0.0 and filter_string != 'none':
         dms = np.arange(dm,dm2,0.01)
+        search = open('search_{:3.1f}.txt'.format(fwhm),'w+')
     else:
         dms = [dm]
-
-    search = open('search_{:3.1f}.txt'.format(fwhm),'w+')
+        search = open('spud.txt'.format(fwhm),'w+')
     
     sig_bins = []
     sig_cens = []
@@ -613,8 +565,8 @@ def main(argv):
         sig_cens.append(d_cens)
         sig_max.append(S[x_cent_S][y_cent_S])
         
-        if pct > 100 :
-            pct, bj,cj = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm, samples=25000)
+        if pct > 90 :
+            pct, bj,cj = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm, samples=10000)
         
         # make a circle to highlight a certain region
         cosd = lambda x : np.cos(np.deg2rad(x))
@@ -793,27 +745,27 @@ def main(argv):
             anno_radii = str(repr(ann_out-2)+','+repr(ann_out-1)+','+repr(ann_out)+','+repr(ann_out+1)+','+repr(ann_out+2))
             # print mark_radius, ann_inn, ann_out
             
-            if disp_flag :
-                from pyraf import iraf
-                iraf.tv(_doprint=0)
-                iraf.unlearn(iraf.tv.tvmark)
-                iraf.tv.tvmark.setParam('label',"no")
-                iraf.tv.tvmark.setParam('pointsize',7)
-                iraf.tv.tvmark.setParam('mark',"circle")
-                # iraf.tv.display(image=fits_file_g, frame=1)
-                iraf.tv.display(image=fits_file_i, frame=1)
-                iraf.tv.tvmark(frame=1, coords=mark_file, radii="14,15,16", color=207)
-                iraf.tv.tvmark(frame=1, coords=circ_file, radii="20,21,22", color=209)
-                iraf.tv.tvmark(frame=1, coords='brightStars22.reg', radii="26,27,28", color=205)
-                iraf.tv.tvmark(frame=1, coords='redStars175.reg', radii="32,33,34", color=204)
-                iraf.tv.tvmark(frame=1, coords=center_file, txsize=4, mark="plus", color=208, label="yes")
-                iraf.tv.tvmark(frame=1, coords=center_file, radii=mark_radii, color=208)
-                iraf.tv.tvmark(frame=1, coords=center_file, radii=anni_radii, color=208)
-                iraf.tv.tvmark(frame=1, coords=center_file, radii=anno_radii, color=208)
-                # iraf.tv.tvmark(frame=2, coords=mark_file, radii="14,15,16", color=207, label="yes")
-                # iraf.tv.tvmark(frame=2, coords=circ_file, radii="20,21,22", color=209)
-                # iraf.tv.tvmark(frame=2, coords=center_file, txsize=4, mark="plus", color=208, label="yes")
-                # iraf.tv.tvmark(frame=2, coords=center_file, radii=mark_radii, color=208)
+            # if disp_flag :
+            #     from pyraf import iraf
+            #     iraf.tv(_doprint=0)
+            #     iraf.unlearn(iraf.tv.tvmark)
+            #     iraf.tv.tvmark.setParam('label',"no")
+            #     iraf.tv.tvmark.setParam('pointsize',7)
+            #     iraf.tv.tvmark.setParam('mark',"circle")
+            #     # iraf.tv.display(image=fits_file_g, frame=1)
+            #     iraf.tv.display(image=fits_file_i, frame=1)
+            #     iraf.tv.tvmark(frame=1, coords=mark_file, radii="14,15,16", color=207)
+            #     iraf.tv.tvmark(frame=1, coords=circ_file, radii="20,21,22", color=209)
+            #     iraf.tv.tvmark(frame=1, coords='brightStars22.reg', radii="26,27,28", color=205)
+            #     iraf.tv.tvmark(frame=1, coords='redStars175.reg', radii="32,33,34", color=204)
+            #     iraf.tv.tvmark(frame=1, coords=center_file, txsize=4, mark="plus", color=208, label="yes")
+            #     iraf.tv.tvmark(frame=1, coords=center_file, radii=mark_radii, color=208)
+            #     iraf.tv.tvmark(frame=1, coords=center_file, radii=anni_radii, color=208)
+            #     iraf.tv.tvmark(frame=1, coords=center_file, radii=anno_radii, color=208)
+            #     # iraf.tv.tvmark(frame=2, coords=mark_file, radii="14,15,16", color=207, label="yes")
+            #     # iraf.tv.tvmark(frame=2, coords=circ_file, radii="20,21,22", color=209)
+            #     # iraf.tv.tvmark(frame=2, coords=center_file, txsize=4, mark="plus", color=208, label="yes")
+            #     # iraf.tv.tvmark(frame=2, coords=center_file, radii=mark_radii, color=208)
         
             # setup the pdf output
             pp = PdfPages('f_'+ out_file)
@@ -890,7 +842,7 @@ def main(argv):
             plt.scatter(gmi_fc, i_mag_fc,  color='red', marker='o', s=15, edgecolors='none')    
             plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='off')
             ax0.yaxis.set_label_position('left')
-            plt.title('in detection circle')
+            plt.title('detection')
             plt.xlabel('$(g-i)_0$')
             plt.ylabel('$i_0$')
             plt.ylim(25,15)
@@ -901,7 +853,7 @@ def main(argv):
             plt.scatter(gmi_cr, i_mag_cr,  color='black', marker='o', s=3, edgecolors='none')
             plt.scatter(gmi_fcr, i_mag_fcr,  color='red', marker='o', s=15, edgecolors='none')    
             plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='on')
-            plt.title('in ref. circle')
+            plt.title('reference')
             ax0.yaxis.set_label_position('left')
             plt.xlabel('$(g-i)_0$')
             plt.ylim(25,15)
@@ -920,15 +872,67 @@ def main(argv):
     # make the overall significance plot
     if len(dms) > 1 :        
         dm_sigplot(dms, sig_bins, sig_max, fwhm, title_string)
-     
-    if imexam_flag :
-        from pyraf import iraf
-        iraf.unlearn(iraf.tv.imexamine, iraf.rimexam)
-        iraf.tv.rimexam.setParam('radius',int(fwhm_i))
-        iraf.tv.rimexam.setParam('rplot',12.)
-        iraf.tv.rimexam.setParam('fittype','gaussian')
-        iraf.tv.rimexam.setParam('center','yes')
-        iraf.tv.imexamine(input=fits_file_i, frame=2)
+    
+    return dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100. 
+    # if imexam_flag :
+    #     from pyraf import iraf
+    #     iraf.unlearn(iraf.tv.imexamine, iraf.rimexam)
+    #     iraf.tv.rimexam.setParam('radius',int(fwhm_i))
+    #     iraf.tv.rimexam.setParam('rplot',12.)
+    #     iraf.tv.rimexam.setParam('fittype','gaussian')
+    #     iraf.tv.rimexam.setParam('center','yes')
+    #     iraf.tv.imexamine(input=fits_file_i, frame=2)
+
+def main(argv):
+    home_root = os.environ['HOME']
+    # set defaults for command line flags
+    imexam_flag = False
+    disp_flag = False
+    # fwhm = 3.0
+    # fwhm_string = repr(fwhm)
+    filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
+    filter_string = 'old'
+    dm2 = None
+
+    try:
+        opts, args = getopt.getopt(argv,"h",["fwhm=","dm=","dm2="])
+    except getopt.GetoptError:
+        print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --dm=<DM in mag>'
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --dm=<DM in mag>'
+            sys.exit()
+        elif opt in ("--fwhm"):
+            fwhm = float(arg)        # in arcmin (7.5 pixels = 1 arcmin)
+            fwhm_string = arg        # this is the smoothing scale, not a stellar profile
+        elif opt in ("--dm"):
+            dm = float(arg)        # in mag
+            dm_string = arg
+        elif opt in ("--dm2"):
+            dm2 = float(arg)
+        elif opt in ("--imexam"):
+            imexam_flag = True
+        elif opt in ("--disp"):
+            disp = arg        # in mag
+            if disp == 'yes' :
+                disp_flag = True
+            else :
+                disp_flag = False
+        elif opt in ("--filter"):
+            filt = arg
+            if arg == 'old' :
+                filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
+                filter_string = 'old'
+            elif arg == 'none':
+                filter_file = 'none'
+                filter_string = 'none'
+            else: 
+                filter_file = os.path.dirname(os.path.abspath(__file__))+'/iso_filter.txt'
+                filter_string = 'iso'
+
+    fwhm_string = fwhm_string.replace('.','_')
+    magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=dm2)
 
 if __name__ == "__main__":
     main(sys.argv[1:])    
