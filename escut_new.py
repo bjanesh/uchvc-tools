@@ -220,12 +220,12 @@ def escut(image, pos_file, fwhm, peak):
     with open('escut_i.pos','w+') as f:
         for i,blah in enumerate(xCut):
             if not drop[i]:
-                print >> f, xCut[i], yCut[i]
+                print >> f, xCut[i], yCut[i], magCut[i], fwhmCut[i]
     
     with open('escut_g.pos','w+') as f:
         for i,blah in enumerate(xCut):
             if not drop[i]:
-                print >> f, xCut[i], yCut[i]
+                print >> f, xCut[i], yCut[i], magCut[i], fwhmCut[i]
     
     plt.fill_betweenx(bin_centers, peakVal+bin_hw, peakVal-bin_hw, facecolor='red', edgecolor='none', alpha=0.4, label='2x RMS sigma clipping region')
 

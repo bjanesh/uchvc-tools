@@ -10,13 +10,237 @@ from astropy import wcs
 from astropy.io import fits
 # from pyraf import iraf
 import scipy.stats as ss
+from scipy import signal
+from odi_calibrate import query, filtercomment, usage, write_header
 from photutils import detect_sources, source_properties, properties_table
 from photutils.utils import random_cmap
 try :
     from scipy import ndimage
 except ImportError :
     print 'bad import'
+
+def downloadSDSSgal(img1, img2):
+    formats = ['csv','xml','html']
     
+    astro_url='http://skyserver.sdss3.org/public/en/tools/search/x_sql.aspx'
+    public_url='http://skyserver.sdss3.org/public/en/tools/search/x_sql.aspx'
+    
+    default_url=public_url
+    default_fmt='csv'
+    
+    try: 
+        import sys
+        import numpy as np
+        from astropy.io import fits
+        from astropy import wcs
+        import os
+        import string
+    except ImportError:
+        print "You should 'pip install astropy' before you try to run this program" 
+    
+    print 'fetching SDSS data from \n--> '+public_url
+    
+    image = img1
+    
+    # read in the image header and save it to a variable for non-destructive editing
+    hdulist = fits.open(image)
+    hdr = hdulist[0].header
+    hdulist.close()
+    # get the image dimensions
+    xdim = hdr['NAXIS1']
+    ydim = hdr['NAXIS2']
+    
+    # and find the image center
+    xc = xdim/2.0
+    yc = ydim/2.0
+    
+    # get the CD matrix keywords
+    cd11 = hdr['CD1_1']
+    cd22 = hdr['CD2_2']
+    # try to load cd12 and cd21, if they don't exist, set them to zero
+    try :
+        cd12 = hdr['CD1_2']
+    except:
+        cd12 = 0.0
+    try :
+        cd21 = hdr['CD2_1']
+    except:
+        cd21 = 0.0
+    
+    # get rid of keywords starting with PV, they don't work with astropy.wcs
+    # and steven thinks they are redundant anyway
+    pvlist = hdr['PV*']
+    for pv in pvlist:
+        hdr.remove(pv)
+        
+    # open the second fits image
+    hdulist = fits.open(img2)
+    hdr_r = hdulist[0].header
+    hdulist.close()
+    
+    pvlist = hdr_r['PV*']
+    for pv in pvlist:
+        hdr_r.remove(pv)
+    
+    # Parse the WCS keywords in the primary HDU
+    w = wcs.WCS(hdr)
+    w_r = wcs.WCS(hdr_r)
+    
+    # Some pixel coordinates of interest (these are the image centers)
+    pixcrd = np.array([[xc,yc]], np.float_)
+    
+    # Convert pixel coordinates to world coordinates
+    # The second argument is "origin" -- in this case we're declaring we
+    # have 1-based (Fortran-like) coordinates.
+    world = w.wcs_pix2world(pixcrd, 1)
+    # print(world)    
+    rac = world[0][0]
+    decc = world[0][1]
+    
+    # get the biggest radius of the image in arcminutes
+    pixscal1 = 3600*abs(cd11)
+    pixscal2 = 3600*abs(cd22)
+    xas = pixscal1 * xdim # in arcseconds
+    yas = pixscal2 * ydim
+    xam = xas/60    # to arcminutes
+    yam = yas/60
+    #print(xam,yam)
+    #radius for query: sqrt2 = 1.414
+    sizeam = 1.414*(xam+yam)/4
+    # print sizeam
+    
+    if not os.path.isfile(image[:-5]+'.sdssgal'):
+        # build the SDSS query
+        qry = "select O.ra, O.dec, O.u, O.err_u, O.g, \nO.err_g, O.r, O.err_r, O.i, \nO.err_i, O.z, O.err_z, O.probPSF \nfrom \ndbo.fGetNearbyObjEq("+repr(rac)+","+repr(decc)+","+repr(sizeam)+") \nas N inner join PhotoObjAll as O on O.objID = N.objID order by N.distance"
+    
+        # print it to the terminal
+        print 'with query\n-->', qry
+        url = default_url
+        fmt = default_fmt
+        writefirst = 1
+        verbose = 0
+    
+        # actually do the query
+    
+        ofp = open(image[:-5]+'.sdssgal','w+')
+        if verbose:
+            write_header(ofp,'#',url,qry)
+        file_ = query(qry,url,fmt)
+        # Output line by line (in case it's big)
+        line = file_.readline()
+        if line.startswith("ERROR"): # SQL Statement Error -> stderr
+            ofp = sys.stderr
+        if writefirst:
+            ofp.write(string.rstrip(line)+os.linesep)
+        line = file_.readline()
+        while line:
+            ofp.write(string.rstrip(line)+os.linesep)
+            line = file_.readline()
+        ofp.close()
+    
+    # read in the results
+    ras,decs,u,err_u,g,err_g,r,err_r,i,err_i,z,err_z = np.loadtxt(image[:-5]+'.sdssgal',usecols=(0,1,2,3,4,5,6,7,8,9,10,11), unpack=True, delimiter=',', skiprows=2)
+    probPSF = np.loadtxt(image[:-5]+'.sdssgal', usecols=(12,), dtype=int, unpack=True, delimiter=',', skiprows=2)
+    
+    coords2 = zip(ras,decs)
+    pixcrd2 = w.wcs_world2pix(coords2, 1)
+    pixcrd2_r = w_r.wcs_world2pix(coords2, 1)
+    
+    # keep things that are actually stars (defined as being psf's) and with the right magnitude range (arbitrary)
+    
+    keep_stars = ((probPSF == 0))# (psfMag_g < gmaglim) & (psfMagErr_g <0.1) & (psfMag_g > gmagbrlim))
+    print 'keeping', len(np.where(keep_stars)[0]), 'galaxies of', len(g), 'sources'
+    
+    # then write out separate files for g and i
+    with open(image[:-5]+'.galxy','w+') as f1:
+        print >> f1, "# x_g y_g ra dec u uerr g gerr r rerr i ierr z zerr (all modelmags)"
+        for j,id in enumerate(np.where(keep_stars)[0]):
+            print >> f1, pixcrd2[id][0], pixcrd2[id][1], ras[id], decs[id], u[id], err_u[id], g[id], err_g[id], r[id], err_r[id], i[id], err_i[id], z[id], err_z[id]
+            
+    with open(img2[:-5]+'.galxy','w+') as f1:
+        print >> f1, "# x_r y_r ra dec u uerr g gerr r rerr i ierr z zerr (all modelmags)"
+        for j,id in enumerate(np.where(keep_stars)[0]):
+            print >> f1, pixcrd2_r[id][0], pixcrd2_r[id][1], ras[id], decs[id], u[id], err_u[id], g[id], err_g[id], r[id], err_r[id], i[id], err_i[id], z[id], err_z[id]
+
+    
+def galaxyMap(fits_file_i, fwhm, dm, filter_file):
+    title_string = fits_file_i.split('_')[0]
+    x_r, y_r, ra, dec, u, uerr, g, gerr, r, rerr, i, ierr, z, zerr = np.loadtxt(fits_file_i[:-5]+'.galxy', usecols=(0,1,2,3,4,5,6,7,8,9,10,11,12,13), unpack=True)
+    gmi = g-i
+    gmierr = [np.sqrt(gerr[j]**2 + ierr[j]**2) for j in range(len(g))]
+    
+    pixcrd = zip(x_r,y_r)
+    
+    fits_i = fits.open(fits_file_i)
+    # Parse the WCS keywords in the primary HDU
+    warnings.filterwarnings('ignore', category=UserWarning, append=True)
+    w = wcs.WCS(fits_i[0].header)
+
+    footprint = w.calc_footprint()
+    se_corner = footprint[0]
+    ne_corner = footprint[1]
+    nw_corner = footprint[2]
+    sw_corner = footprint[3]
+    # print se_corner, ne_corner, nw_corner, sw_corner
+    width = (ne_corner[0]-nw_corner[0])*60.
+    height = (ne_corner[1]-se_corner[1])*60.
+
+    world = w.all_pix2world(pixcrd, 1)
+    ra_corner, dec_corner = w.all_pix2world(0,0,1)
+    ra_c_d,dec_c_d = deg2HMS(ra=ra_corner, dec=dec_corner, round=True)
+
+    fits_i.close()
+    
+    # split the ra and dec out into individual arrays and transform to arcmin from the corner
+    i_ra = [abs((world[j,0]-ra_corner)*60) for j in range(len(world[:,0]))]
+    i_dec = [abs((world[j,1]-dec_corner)*60) for j in range(len(world[:,1]))]
+    
+    if dm > 0:
+        cm_filter, gi_iso, i_m_iso = make_filter(dm, filter_file)
+        stars_f = filter_sources(i, ierr, gmi, gmierr, cm_filter, filter_sig = 1, gal=True)
+    else:
+        stars_f = [True] * i
+    xy_points = zip(i_ra,i_dec)
+    
+    # make new vectors containing only the filtered points
+    
+    i_f = [i[j] for j in range(len(x_r)) if (stars_f[j])]
+    g_f = [g[j] for j in range(len(x_r)) if (stars_f[j])]
+    gmi_f = [gmi[j] for j in range(len(x_r)) if (stars_f[j])]
+    ra_f = [i_ra[j] for j in range(len(x_r)) if (stars_f[j])]
+    dec_f = [i_dec[j] for j in range(len(x_r)) if (stars_f[j])]
+    x_f = [x_r[j] for j in range(len(x_r)) if (stars_f[j])]
+    y_f = [y_r[j] for j in range(len(x_r)) if (stars_f[j])]
+    
+    xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(ra_f, dec_f, fwhm, width, height)
+    
+    plt.figure(figsize=(10,4))
+    ax1 = plt.subplot(1,2,1)
+    ax1.scatter(gmi, i,  color='black', marker='o', s=1, edgecolors='none')
+    plt.scatter(gmi_f, i_f,  color='red', marker='o', s=15, edgecolors='none')
+    plt.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
+    ax1.tick_params(axis='y',left='on',right='off',labelleft='on',labelright='off')
+    ax1.yaxis.set_label_position('left')
+    ax1.set_ylabel('$i_0$')
+    ax1.set_xlabel('$(g-i)_0$')
+    ax1.set_ylim(25,15)
+    ax1.set_xlim(-1,4)
+    
+    ax2 = plt.subplot(1,2,2)
+    extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
+    gr = ax2.imshow(S, extent=extent, interpolation='nearest',cmap=cm.gray)
+    # ax2.imshow(segm, extent=extent, cmap=rand_cmap, alpha=0.5)
+    cbar_S = plt.colorbar(gr)
+    cbar_S.set_label('$\sigma$ from local mean')
+    ax2.set_xlabel('RA (arcmin)')
+    ax2.set_ylabel('Dec (arcmin)')
+    ax2.set_xlim(0,width)#max(i_ra))
+    ax2.set_ylim(0,height)#max(i_dec))
+    plt.tight_layout()
+    plt.savefig('galmap_{:s}_{:5.2f}_{:3.1f}.pdf'.format(title_string, dm, fwhm))
+    
+    return xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl
+        
 def getHIellipse(object, ra_corner, dec_corner, centroid=False):
     from astropy import units as u
     from astropy.coordinates import SkyCoord
@@ -209,10 +433,13 @@ def make_filter(dm, filter_file):
         cm_filter = Path(verts)     # scale the filter to the DM: to find the apparent mag. just add the DM
     return cm_filter, gi_iso, i_m_iso
 
-def filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1):
+def filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1, gal = False):
     if cm_filter == None:
         stars_f = [True] * len(gmi)
     # first get the stars that are in the filter (points & 1-sig error bars!)
+    elif gal:
+        print min(cm_filter.vertices[:,1])
+        stars_f = (0.75 < gmi) & (1.5 > gmi) & (min(cm_filter.vertices[:,1]) < i_mag)
     else:
         stars_f = list(gmi)
         for i in range(len(gmi)) :
@@ -271,7 +498,7 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     grid_mean = np.mean(grid_gaus)
     grid_sigma = np.std(grid_gaus)
     S = (grid_gaus-grid_mean)/grid_sigma
-    
+    # print len(i_ra_f), grid_mean, grid_sigma
     
     above_th = [(int(i),int(j)) for i in range(len(S)) for j in range(len(S[i])) if (S[i][j] >= S_th)]
     
@@ -398,6 +625,8 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
     for file_ in os.listdir("./"):
         if file_.endswith("g.fits"):
             fits_file_g = file_
+    
+    downloadSDSSgal(fits_file_g, fits_file_i)
               
     fits_i = fits.open(fits_file_i)
     # fits_g = fits.open(fits_file_g)
@@ -430,6 +659,10 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
     gmi = [gmir[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
     fwhm_s = [fwhm_sr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
     gmi_err = np.array([np.sqrt(g_ierrr[i]**2 + i_ierrr[i]**2) for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))])
+    cutleft = [i for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    with open('cutleft.txt', 'w+') as spud:
+        for i,item in enumerate(cutleft):
+            print >> spud, item
     
     i_ierrAVG, bedges, binid = ss.binned_statistic(i_mag,i_ierr,statistic='median',bins=10,range=[15,25])
     gmi_errAVG, bedges, binid = ss.binned_statistic(i_mag,gmi_err,statistic='median',bins=10,range=[15,25])
@@ -557,7 +790,12 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         fwhm_sf = [fwhm_s[i] for i in range(len(i_mag)) if (stars_f[i])]
         n_in_filter = len(i_mag_f)
         
+        xedgesg, x_centg, yedgesg, y_centg, Sg, x_cent_Sg, y_cent_Sg, pltsigg, tblg = galaxyMap(fits_file_i, fwhm, dm, filter_file)
+        
         xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm, width, height)
+        # corr = signal.correlate2d(S, Sg, boundary='fill', mode='full')
+        # print corr
+        
         pct, d_bins, d_cens = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm)
         pct_hi = 0.0 #getHIcoincidence(x_cent_S, y_cent_S, title_string, ra_corner, dec_corner, width, height, dm)
         
@@ -628,27 +866,31 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
         i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
         fwhm_sfc = [fwhm_s[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        index_fc = [i for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        with open('index_fc.txt', 'w+') as spud1:
+            for i,item in enumerate(index_fc):
+                print >> spud1, item
         
         # print len(i_mag_fc), 'filter stars in circle'
         
         # print 'max i mag in circle = ', min(i_mag_fc)
         
-        rs = np.array([45, 55, 65, 75, 85, 90, 180])
-        for r in rs:    
-            x_circ = [yedges[y_cent] + r/60.*cosd(t) for t in range(0,359,1)]
-            y_circ = [xedges[x_cent] + r/60.*sind(t) for t in range(0,359,1)]
-    
-            verts_circ = zip(x_circ,y_circ)
-            circ_filter = Path(verts_circ)
-    
-            stars_circ = circ_filter.contains_points(xy_points)
-            i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
-            i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
-        
-            fcirc_file = 'circle'+repr(r)+'.txt'
-            with open(fcirc_file,'w+') as f3:
-                for i,x in enumerate(i_x_fc):
-                    print >> f3, i_x_fc[i], i_y_fc[i]
+        # rs = np.array([45, 55, 65, 75, 85, 90, 180])
+        # for r in rs:    
+        #     x_circ = [yedges[y_cent] + r/60.*cosd(t) for t in range(0,359,1)]
+        #     y_circ = [xedges[x_cent] + r/60.*sind(t) for t in range(0,359,1)]
+        # 
+        #     verts_circ = zip(x_circ,y_circ)
+        #     circ_filter = Path(verts_circ)
+        # 
+        #     stars_circ = circ_filter.contains_points(xy_points)
+        #     i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        #     i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        # 
+        #     fcirc_file = 'circle'+repr(r)+'.txt'
+        #     with open(fcirc_file,'w+') as f3:
+        #         for i,x in enumerate(i_x_fc):
+        #             print >> f3, i_x_fc[i], i_y_fc[i]
         
         i_mag_fcr = [i_mag[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
         i_ierr_fcr = [i_ierr[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]

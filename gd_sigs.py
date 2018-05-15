@@ -13,7 +13,7 @@ from collections import OrderedDict
 from magfilter import deg2HMS, grid_smooth, getHIellipse, dist2HIcentroid, make_filter, filter_sources, distfit, dm_sigplot
 
 def main():
-    objects = OrderedDict([('AGC198511',25.30), ('AGC215417',22.72), ('HI1151+20',24.70), ('AGC238626',26.01), ('AGC249000',25.30), ('AGC249320',25.34), ('AGC249525',26.07), ('AGC258237',24.02), ('AGC268069',24.24), ('AGC198606',22.89), ('HI0959+19',23.08)])
+    objects = OrderedDict([('AGC198606',24.72), ('AGC215417',22.69), ('AGC249525',26.78), ('AGC268069',24.24),  ('HI0932+24',26.87), ('HI1151+20',24.76)])
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     
     fwhm_sm = 2.0
@@ -21,7 +21,7 @@ def main():
     
     # plt.clf()
     fig = plt.figure(figsize=(10,7))
-    outer = gridspec.GridSpec(4,3, wspace=0.1, hspace=0.1)
+    outer = gridspec.GridSpec(3,2, wspace=0.1, hspace=0.1)
     for i, obj in enumerate(objects.keys()):
         print obj
         inner = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=outer[i], wspace=0.1, hspace=0.1)
@@ -112,7 +112,7 @@ def main():
         sig_cens = []
         sig_max = []
         
-        dms = np.arange(22.0,27.0,0.1)
+        dms = np.arange(22.0,27.0,0.01)
         
         for dm in dms:
             mpc = pow(10,((dm + 5.)/5.))/1000000.
