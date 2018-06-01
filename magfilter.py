@@ -626,7 +626,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         if file_.endswith("g.fits"):
             fits_file_g = file_
     
-    downloadSDSSgal(fits_file_g, fits_file_i)
+    # downloadSDSSgal(fits_file_g, fits_file_i)
               
     fits_i = fits.open(fits_file_i)
     # fits_g = fits.open(fits_file_g)
@@ -790,7 +790,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         fwhm_sf = [fwhm_s[i] for i in range(len(i_mag)) if (stars_f[i])]
         n_in_filter = len(i_mag_f)
         
-        xedgesg, x_centg, yedgesg, y_centg, Sg, x_cent_Sg, y_cent_Sg, pltsigg, tblg = galaxyMap(fits_file_i, fwhm, dm, filter_file)
+        # xedgesg, x_centg, yedgesg, y_centg, Sg, x_cent_Sg, y_cent_Sg, pltsigg, tblg = galaxyMap(fits_file_i, fwhm, dm, filter_file)
         
         xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm, width, height)
         # corr = signal.correlate2d(S, Sg, boundary='fill', mode='full')
@@ -804,7 +804,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         sig_max.append(S[x_cent_S][y_cent_S])
         
         if pct > 90 :
-            pct, bj,cj = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm, samples=10000)
+            pct, bj,cj = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm, samples=25000)
         
         # make a circle to highlight a certain region
         cosd = lambda x : np.cos(np.deg2rad(x))
@@ -875,22 +875,22 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         
         # print 'max i mag in circle = ', min(i_mag_fc)
         
-        # rs = np.array([45, 55, 65, 75, 85, 90, 180])
-        # for r in rs:    
-        #     x_circ = [yedges[y_cent] + r/60.*cosd(t) for t in range(0,359,1)]
-        #     y_circ = [xedges[x_cent] + r/60.*sind(t) for t in range(0,359,1)]
-        # 
-        #     verts_circ = zip(x_circ,y_circ)
-        #     circ_filter = Path(verts_circ)
-        # 
-        #     stars_circ = circ_filter.contains_points(xy_points)
-        #     i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
-        #     i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
-        # 
-        #     fcirc_file = 'circle'+repr(r)+'.txt'
-        #     with open(fcirc_file,'w+') as f3:
-        #         for i,x in enumerate(i_x_fc):
-        #             print >> f3, i_x_fc[i], i_y_fc[i]
+        rs = np.array([51, 77, 90, 180])
+        for r in rs:
+            x_circ = [yedges[y_cent] + r/60.*cosd(t) for t in range(0,359,1)]
+            y_circ = [xedges[x_cent] + r/60.*sind(t) for t in range(0,359,1)]
+
+            verts_circ = zip(x_circ,y_circ)
+            circ_filter = Path(verts_circ)
+
+            stars_circ = circ_filter.contains_points(xy_points)
+            i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+            i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+
+            fcirc_file = 'circle'+repr(r)+'.txt'
+            with open(fcirc_file,'w+') as f3:
+                for i,x in enumerate(i_x_fc):
+                    print >> f3, i_x_fc[i], i_y_fc[i]
         
         i_mag_fcr = [i_mag[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
         i_ierr_fcr = [i_ierr[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
@@ -934,16 +934,16 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         # print ra_c, dec_c
         # print hi_c_ra, hi_c_dec
         
-        print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}% | η = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.)
-        print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.)        
+        print "m-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}' | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}% | η = {:6.3f}%".format(dm, mpc, ra_c_d, dec_c_d, sep/60., n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.)
+        print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep/60., n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.)        
 
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
         #iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no') 
         if pct > 90.:
-            # with open(ds9_file,'w+') as ds9:
-            #     print >> ds9, "fk5;circle({:f},{:f},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr)
-            #     print >> ds9, "fk5;circle({:f},{:f},2') # color=magenta width=2 label=detection".format(ra_c, dec_c)
-            #     print >> ds9, "fk5;circle({:f},{:f},0.5') # color=black width=2 label=HI".format(hi_c_ra, hi_c_dec)
+            with open(ds9_file,'w+') as ds9:
+                print >> ds9, "fk5;circle({:f},{:f},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr)
+                print >> ds9, "fk5;circle({:f},{:f},2') # color=magenta width=2 label=detection".format(ra_c, dec_c)
+                print >> ds9, "fk5;circle({:f},{:f},0.5') # color=black width=2 label=HI".format(hi_c_ra, hi_c_dec)
             
             f1 = open(filter_reg, 'w+')
             for i in range(len(i_x_f)) :

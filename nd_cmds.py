@@ -14,12 +14,15 @@ from magfilter import deg2HMS, grid_smooth, getHIellipse, make_filter, filter_so
 def main():
     # objects = ['AGC174540', 'AGC226067', 'AGC227987', 'AGC229326', 'AGC238713', 'AGC249282', 'AGC249323', 'AGC258242', 'AGC258459', 'AGC268074', 'HI1037+21', 'HI1050+23']
     
-    objects = OrderedDict([('AGC174540',25.19), ('AGC226067',24.72), ('AGC227987',24.46), ('AGC229326',22.14), ('AGC238713',26.73), ('AGC249282',24.14), ('AGC249323',26.42), ('AGC258242',26.00), ('AGC258459',23.00), ('AGC268074',23.12), ('HI1037+21',22.02), ('HI1050+23',22.86)])
+    # objects = OrderedDict([('AGC174540',25.28), ('AGC198511',26.75), ('HI1037+21',23.59), ('AGC226067',24.72), ('AGC227987',24.57), ('AGC229326',22.03), ('AGC238626',23.25)])
+    objects = OrderedDict([('AGC238713',26.20), ('AGC249000',26.40), ('AGC249282',24.01), ('AGC249323',26.40), ('AGC258237',26.90), ('AGC258459',25.63), ('HI1050+23',22.17)])
+    # smooths = OrderedDict([('AGC174540',2.0), ('AGC198511',2.0), ('HI1037+21',2.0), ('AGC226067',2.0), ('AGC227987',3.0), ('AGC229326',2.0), ('AGC238626',3.0)])
+    smooths = OrderedDict([('AGC238713',3.0), ('AGC249000',3.0), ('AGC249282',2.0), ('AGC249323',2.0), ('AGC258237',2.0), ('AGC258459',2.0), ('HI1050+23',3.0)])
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     
     # plt.clf()
-    fig = plt.figure(figsize=(10,7))
-    outer = gridspec.GridSpec(4,3, wspace=0.1, hspace=0.1)
+    fig = plt.figure(figsize=(8,8))
+    outer = gridspec.GridSpec(4,2, wspace=0.1, hspace=0.1)
     for i, obj in enumerate(objects.keys()):
         inner = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[i], wspace=0.1, hspace=0.1)
         # set up some filenames
@@ -29,6 +32,8 @@ def main():
         fits_i = fits.open(fits_file_i)
         
         dm = objects[obj]
+        mpc = pow(10,((dm + 5.)/5.))/1000000.
+        sm = smooths[obj]
         
         # read in magnitudes, colors, and positions(x,y)
         # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
@@ -122,7 +127,7 @@ def main():
         fwhm_sf = [fwhm_s[i] for i in range(len(i_mag)) if (stars_f[i])]
         n_in_filter = len(i_mag_f)
         
-        xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, 2.0, width, height)
+        xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, sm, width, height)
         
         # xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra, i_dec, 2.0, width, height)
         
@@ -169,7 +174,7 @@ def main():
         ax1.set_ylim(25,15)
         ax1.set_xlim(-1,4)
         ax1.set_aspect(0.5)
-        ax1.set_title('$m-M = ${:5.2f}'.format(dm), size='small')
+        ax1.set_title('$m-M = ${:5.2f} | $d = ${:4.2f} Mpc'.format(dm, mpc), size='small')
         fig.add_subplot(ax1)
         
         ax2 = plt.Subplot(fig, inner[1])
@@ -186,7 +191,7 @@ def main():
         ax2.set_xlabel('RA (arcmin)')
         ax2.set_ylabel('Dec (arcmin)')
         if obj.startswith('HI1037'):
-            ax2.set_title('AGC219656', size='small')
+            ax2.set_title('AGC208747', size='small')
         else:
             ax2.set_title(obj, size='small')
         ax2.set_xlim(0,max(i_ra))

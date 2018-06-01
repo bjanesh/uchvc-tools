@@ -12,7 +12,8 @@ from collections import OrderedDict
 from magfilter import deg2HMS, grid_smooth, getHIellipse, make_filter, filter_sources
 
 def main():
-    objects = OrderedDict([('AGC198606',24.72), ('AGC215417',22.69), ('AGC249525',26.78), ('AGC268069',24.24),  ('HI0932+24',26.87), ('HI1151+20',24.76)])
+    objects = OrderedDict([('AGC198511',22.91), ('AGC198606',24.72), ('AGC215417',22.69), ('HI1151+20',24.76), ('AGC249525',26.78), ('AGC268069',24.24)])
+    smooths = OrderedDict([('AGC198511',3.0), ('AGC198606',2.0), ('AGC215417',3.0), ('HI1151+20',2.0), ('AGC249525',3.0), ('AGC268069',3.0)])
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     
     # plt.clf()
@@ -27,6 +28,7 @@ def main():
         fits_i = fits.open(fits_file_i)
         
         dm = objects[obj]
+        mpc = pow(10,((dm + 5.)/5.))/1000000.
         
         # read in magnitudes, colors, and positions(x,y)
         # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
@@ -120,7 +122,8 @@ def main():
         fwhm_sf = [fwhm_s[i] for i in range(len(i_mag)) if (stars_f[i])]
         n_in_filter = len(i_mag_f)
         
-        xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, 2.0, width, height)
+        fwhm = smooths[obj]
+        xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm, width, height)
         
         # xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra, i_dec, 2.0, width, height)
         
@@ -167,7 +170,7 @@ def main():
         ax1.set_ylim(25,15)
         ax1.set_xlim(-1,4)
         ax1.set_aspect(0.5)
-        ax1.set_title('$m-M = ${:5.2f}'.format(dm), size='small')
+        ax1.set_title('$m-M = ${:5.2f} | $d = ${:4.2f} Mpc'.format(dm, mpc), size='small')
         fig.add_subplot(ax1)
         
         ax2 = plt.Subplot(fig, inner[1])
@@ -183,10 +186,10 @@ def main():
         ax2.set_yticks([0,5,10,15,20])
         ax2.set_xlabel('RA (arcmin)')
         ax2.set_ylabel('Dec (arcmin)')
-        # if obj.startswith('HI1151'):
-        #     ax2.set_title('AGC219656', size='small')
-        # else:
-        ax2.set_title(obj, size='small')
+        if obj.startswith('HI1151'):
+            ax2.set_title('AGC219656', size='small')
+        else:
+            ax2.set_title(obj, size='small')
         ax2.set_xlim(0,max(i_ra))
         ax2.set_ylim(0,max(i_dec))
         ax2.set_aspect('equal')

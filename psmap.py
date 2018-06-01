@@ -14,8 +14,8 @@ try :
 except ImportError :
     from stsci import ndimage
 
-def main(argv):
-    fwhm = float(argv[1])
+def main():
+    fwhm = float(sys.argv[1])
     filter_string = 'psmap'
     fwhm_string = '{:3.1f}'.format(fwhm)
     iraf.tv(_doprint=0)
@@ -32,7 +32,7 @@ def main(argv):
         if file_.endswith("g.fits"):
             fits_file_g = file_
 
-    downloadSDSSgal(fits_file_g, fits_file_i)
+    # downloadSDSSgal(fits_file_g, fits_file_i)
 
     fits_i = fits.open(fits_file_i)
     fits_g = fits.open(fits_file_g)
@@ -44,8 +44,8 @@ def main(argv):
     # set up some filenames
     out_file = filter_string + '_' + fwhm_string + '_' + title_string + '.pdf'
     mag_file = 'calibrated_mags.dat'
-    mark_file = 'f_list_' + filter_string + '_' + fwhm_string + '_' + title_string + '.dat'
-    circ_file = 'c_list_' + filter_string + '_' + fwhm_string + '_' + title_string + '.dat'
+    mark_file = 'f_list_' + filter_string + '_' + fwhm_string + '_' + title_string + '.reg'
+    circ_file = 'c_list_' + filter_string + '_' + fwhm_string + '_' + title_string + '.reg'
 
 
     # read in magnitudes, colors, and positions(x,y)
@@ -87,8 +87,8 @@ def main(argv):
     # The second argument is "origin" -- in this case we're declaring we
     # have 1-based (Fortran-like) coordinates.
     world = w.all_pix2world(pixcrd, 1)
-    ra_c, dec_c = w.all_pix2world(0,0,1)
-    ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=True)
+    ra_corner, dec_corner = w.all_pix2world(0,0,1)
+    ra_c_d,dec_c_d = deg2HMS(ra=ra_corner, dec=dec_corner, round=True)
     print 'Corner RA:',ra_c_d,':: Corner Dec:',dec_c_d
 
     # fwhm_i = fits_i[0].header['FWHMPSF']
@@ -100,8 +100,8 @@ def main(argv):
     fits_g.close()
 
     # split the ra and dec out into individual arrays and transform to arcmin from the corner
-    i_ra = [abs((world[i,0]-ra_c)*60) for i in range(len(world[:,0]))]
-    i_dec = [abs((world[i,1]-dec_c)*60) for i in range(len(world[:,1]))]
+    i_ra = [abs((world[i,0]-ra_corner)*60) for i in range(len(world[:,0]))]
+    i_dec = [abs((world[i,1]-dec_corner)*60) for i in range(len(world[:,1]))]
     # also preserve the decimal degrees for reference
     i_rad = [world[i,0] for i in range(len(world[:,0]))]
     i_decd = [world[i,1] for i in range(len(world[:,1]))]
@@ -111,7 +111,7 @@ def main(argv):
     bins = 165
     width = 22 
     
-    galaxyMap(fits_file_i, fwhm, -1.0, filter_file)
+    # galaxyMap(fits_file_i, fwhm, -1.0, filter_file)
 
     grid, xedges, yedges = np.histogram2d(i_dec, i_ra, bins=[bins,bins], range=[[0,width],[0,width]])
     hist_points = zip(xedges,yedges)
@@ -164,6 +164,15 @@ def main(argv):
     xy_points = zip(i_ra,i_dec)
     verts_circ = zip(x_circ,y_circ)
     circ_filter = Path(verts_circ)
+    circ_c_x = ra_corner-(yedges[y_cent]/60.)
+    circ_c_y = (xedges[x_cent]/60.)+dec_corner
+    circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
+    ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
+    
+    ds9_file = 'circles_psmap_' + title_string + '.reg'
+    
+    with open(ds9_file,'w+') as ds9:
+        print >> ds9, "fk5;circle({:f},{:f},2') # color=cyan width=2 label=psmap".format(ra_c, dec_c)
 
     stars_circ = circ_filter.contains_points(xy_points)    
 
@@ -346,4 +355,4 @@ def deg2HMS(ra='', dec='', round=False):
      return RA or DEC
 
 if __name__ == "__main__":
-    main(sys.argv[1:])    
+    main()    

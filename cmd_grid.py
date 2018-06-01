@@ -15,7 +15,7 @@ from scipy.stats import binned_statistic_2d
 import matplotlib.patches as patches
 
 path = os.getcwd()
-title_string = path.split('/')[-1]
+title_string = path.split('/')[-1].upper()
 hdulist = fits.open(title_string+'_i.fits')
 hdu = hdulist[0]
 naxis1, naxis2 = hdu.header['NAXIS1'], hdu.header['NAXIS2']
