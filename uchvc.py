@@ -75,24 +75,26 @@ if not unpacked :
     funpack_cmd = funpack_path+' *.fz'
     call(funpack_cmd, shell=True)
 
-for file_ in os.listdir("./"):
-    if file_.endswith("i_match.fits"):
-        fits_file_i = file_
-    if file_.endswith("g_match.fits"):
-        fits_file_g = file_
+# for file_ in os.listdir("./"):
+#     if file_.endswith("i_match.fits"):
+#         fits_file_i = file_
+#     if file_.endswith("g_match.fits"):
+#         fits_file_g = file_
 
 path = os.getcwd()
 steps = path.split('/')
-title_string = steps[-1].upper()        # which should always exist in the directory
+folder = steps[-1]
+objname = folder.split('_')[0]
+title_string = objname.upper()        # which should always exist in the directory
         
 # copy the good region (no cell gaps) to a new file        
 fits_g = title_string+'_g.fits'
-if not os.path.isfile(fits_g) :
-    iraf.images.imcopy(fits_file_g+'[3000:14000,3000:14000]',fits_g,verbose="yes")
+# if not os.path.isfile(fits_g) :
+#     iraf.images.imcopy(fits_file_g+'[3000:14000,3000:14000]',fits_g,verbose="yes")
     
 fits_i = title_string+'_i.fits'
-if not os.path.isfile(fits_i) :
-    iraf.images.imcopy(fits_file_i+'[3000:14000,3000:14000]',fits_i,verbose="yes")
+# if not os.path.isfile(fits_i) :
+#     iraf.images.imcopy(fits_file_i+'[3000:14000,3000:14000]',fits_i,verbose="yes")
 
 # # remove the unpacked fits file to save space, keep the .fz
 #try:
@@ -701,14 +703,16 @@ print 'Reddening correction :: g = {0:7.4f} : i = {1:7.4f}'.format(cal_A_g,cal_A
 # 
 # print 'gi color term :: eps = {0:7.4f}'.format(cal_color_g)
 # print 'gi color term err :: eps = {0:7.4f}'.format(cal_color_ge)
-print title_string
-txdump_out = open('phot_sources.txdump','w+')
-iraf.ptools.txdump(textfiles=title_string+'_sources_*.mag.1', fields="id,mag,merr,msky,stdev,rapert,xcen,ycen,ifilter,xairmass,image", expr='yes', headers='no', Stdout=txdump_out)
-txdump_out.close()
+# print title_string
+if not os.path.isfile('phot_sources.txdump'):
+    txdump_out = open('phot_sources.txdump','w+')
+    iraf.ptools.txdump(textfiles=title_string+'_sources_*.mag.1', fields="id,mag,merr,msky,stdev,rapert,xcen,ycen,ifilter,xairmass,image", expr='yes', headers='no', Stdout=txdump_out)
+    txdump_out.close()
 
-call('sort -g phot_sources.txdump > temp', shell=True)
-call('mv temp phot_sources.txdump', shell=True)
-call('awk -f '+os.path.dirname(os.path.abspath(__file__))+'/make_calibdat phot_sources.txdump > calibration.dat', shell=True)
+if not os.path.isfile('calibration.dat'):
+    call('sort -g phot_sources.txdump > temp', shell=True)
+    call('mv temp phot_sources.txdump', shell=True)
+    call('awk -f '+os.path.dirname(os.path.abspath(__file__))+'/make_calibdat phot_sources.txdump > calibration.dat', shell=True)
 
 nid,gx,gy,g_i,g_ierr,ix,iy,i_i,i_ierr = np.loadtxt('calibration.dat',usecols=(0,1,2,4,5,11,12,14,15),unpack=True)
 
@@ -730,7 +734,10 @@ g0 = g_i - (kg*amg) + apcor_g
 i0 = i_i - (ki*ami) + apcor_i
 
 # download_sdss(fits_g, fits_i, gmaglim = 22.0)
-eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = fits_g, img2 = fits_i)
+if not os.path.isfile(title_string+'_help_js.txt'):
+    eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = fits_g, img2 = fits_i)
+else:
+    eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = np.loadtxt(title_string+'_help_js.txt', usecols=(0,1,2,3,4,5,6,7), skiprows=32, unpack=True)
 
 # use the instrumental magnitude and initial color guess to ITERATE 
 # until you reach a converged calibrated magnitude/color

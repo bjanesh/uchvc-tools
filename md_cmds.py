@@ -12,13 +12,13 @@ from collections import OrderedDict
 from magfilter import deg2HMS, grid_smooth, getHIellipse, make_filter, filter_sources
 
 def main():
-    objects = OrderedDict([('AGC198606',24.72), ('AGC215417',22.69), ('HI1151+20',24.76), ('AGC249525',26.07), ('AGC268069',24.24)])
-    smooths = OrderedDict([('AGC198606',2.0), ('AGC215417',3.0), ('HI1151+20',2.0), ('AGC249525',3.0), ('AGC268069',3.0)])
+    objects = OrderedDict([('AGC249320',25.28), ('AGC258242',25.05), ('AGC268074',22.10), ('HI0959+19',23.08)])
+    smooths = OrderedDict([('AGC249320',2.0),   ('AGC258242',3.0),   ('AGC268074',2.0),   ('HI0959+19',2.0)])
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     
     # plt.clf()
-    fig = plt.figure(figsize=(8,6))
-    outer = gridspec.GridSpec(3,2, wspace=0.1, hspace=0.1)
+    fig = plt.figure(figsize=(8,4))
+    outer = gridspec.GridSpec(2,2, wspace=0.1, hspace=0.1)
     for i, obj in enumerate(objects.keys()):
         inner = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[i], wspace=0.1, hspace=0.1)
         # set up some filenames
@@ -197,7 +197,7 @@ def main():
         fig.add_subplot(ax2)
         
     outer.tight_layout(fig)
-    plt.savefig('detections.pdf')
+    plt.savefig('marginals.pdf')
         
     pass
 

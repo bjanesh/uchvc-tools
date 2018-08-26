@@ -1082,6 +1082,7 @@ def js_calibrate(img1 = None, img2 = None, podicut = 0.03, sdsscut = 0.03, verbo
         print >> f1, "  maximum acceptable pODI PHOT error: {0:.4f}".format(podicut)
         print >> f1, "  maximum acceptable sdss phot error: {0:.4f}".format(sdsscut)
         print >> f1, "  N_stars surviving error cuts:       {0:4d}".format(len(gi[errcut]))
+        print >> f1, eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i
         # print >> f1, "  N_stars surviving sigma clip (i-i0 vs g-i plot): {0:4d}".format(len(gi_3))
     print '--------------------------------------------------------------------------'
     print 'Done! I saved some important information in the following files for you:'

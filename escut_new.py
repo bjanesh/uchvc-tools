@@ -190,7 +190,8 @@ def escut(image, pos_file, fwhm, peak):
         for i,blah in enumerate(xpos[sources]):
             print >> f, (xpos[sources])[i], (ypos[sources])[i], (diff[sources])[i]
     
-    magCut = mag2x[sources]
+    magCut2 = mag2x[sources]
+    magCut1 = mag1x[sources]
     fwhmCut = fwhm[sources]   
     xCut = xpos[sources]
     yCut = ypos[sources] 
@@ -206,7 +207,7 @@ def escut(image, pos_file, fwhm, peak):
     #         print >> f, xpos[blah-1], ypos[blah-1]
             
     # fwhmcheck = np.loadtxt('testfwhmREG.log', usecols=(10,), unpack=True)
-    fwhmchk2 = np.where((magCut<-4) & (fwhmCut<90.0))
+    fwhmchk2 = np.where((magCut2<-4) & (fwhmCut<90.0))
     print np.median(fwhmCut[fwhmchk2]), np.std(fwhmCut[fwhmchk2])
     fwchk = np.where(np.abs(fwhmCut-np.median(fwhmCut[fwhmchk2])) > 10.0*np.std(fwhmCut[fwhmchk2]))
     drop = np.abs(fwhmCut-np.median(fwhmCut[fwhmchk2])) > 10.0*np.std(fwhmCut[fwhmchk2])
@@ -220,16 +221,16 @@ def escut(image, pos_file, fwhm, peak):
     with open('escut_i.pos','w+') as f:
         for i,blah in enumerate(xCut):
             if not drop[i]:
-                print >> f, xCut[i], yCut[i], magCut[i], fwhmCut[i]
+                print >> f, xCut[i], yCut[i], magCut2[i], fwhmCut[i], magCut1[i]
     
     with open('escut_g.pos','w+') as f:
         for i,blah in enumerate(xCut):
             if not drop[i]:
-                print >> f, xCut[i], yCut[i], magCut[i], fwhmCut[i]
+                print >> f, xCut[i], yCut[i], magCut2[i], fwhmCut[i], magCut1[i]
     
     plt.fill_betweenx(bin_centers, peakVal+bin_hw, peakVal-bin_hw, facecolor='red', edgecolor='none', alpha=0.4, label='2x RMS sigma clipping region')
 
-    plt.scatter(diffCut[fwchk], magCut[fwchk], edgecolor='none', facecolor='red', s=4)
+    plt.scatter(diffCut[fwchk], magCut2[fwchk], edgecolor='none', facecolor='red', s=4)
     plt.ylim(0,-12)
     plt.xlabel('$m_{2x} - m_{1x}$')
     plt.ylabel('$m_{2x}$')
@@ -237,8 +238,8 @@ def escut(image, pos_file, fwhm, peak):
     plt.savefig('testmagiraf.pdf')
     
     plt.clf()
-    plt.scatter(magCut, fwhmCut, edgecolor='none', facecolor='black')
-    plt.scatter(magCut[fwchk], fwhmCut[fwchk], edgecolor='none', facecolor='red')
+    plt.scatter(magCut2, fwhmCut, edgecolor='none', facecolor='black')
+    plt.scatter(magCut2[fwchk], fwhmCut[fwchk], edgecolor='none', facecolor='red')
     plt.hlines([np.median(fwhmCut)], -12, 0, colors='red', linestyle='dashed')
     plt.hlines([np.median(fwhmCut)+fwhmCut.std(), np.median(fwhmCut)-fwhmCut.std()], -12, 0, colors='red', linestyle='dotted')
     plt.ylim(0,20)

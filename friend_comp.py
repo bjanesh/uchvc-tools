@@ -12,19 +12,22 @@ from collections import OrderedDict
 from magfilter import deg2HMS, grid_smooth, getHIellipse, make_filter, filter_sources
 
 def main():
-    objects = OrderedDict([('AGC198606',24.72), ('AGC215417',22.69), ('HI1151+20',24.76), ('AGC249525',26.07), ('AGC268069',24.24)])
-    smooths = OrderedDict([('AGC198606',2.0), ('AGC215417',3.0), ('HI1151+20',2.0), ('AGC249525',3.0), ('AGC268069',3.0)])
+    objects = OrderedDict([('new',22.89), ('old',22.89)])
+    smooths = OrderedDict([('new',2.0), ('old',2.0)])
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     
     # plt.clf()
-    fig = plt.figure(figsize=(8,6))
-    outer = gridspec.GridSpec(3,2, wspace=0.1, hspace=0.1)
+    fig = plt.figure(figsize=(4,4))
+    outer = gridspec.GridSpec(2,1, wspace=0.1, hspace=0.1)
     for i, obj in enumerate(objects.keys()):
         inner = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[i], wspace=0.1, hspace=0.1)
         # set up some filenames
-        folder = '/Volumes/galileo/uchvc/targets/'+obj.lower()+'/'
+        if i == 0:
+            folder = '/Volumes/galileo/uchvc/targets/agc198606/'
+        if i == 1:
+            folder = '/Volumes/galileo/uchvc/targets/agc198606_correct_old/'
         mag_file = folder+'calibrated_mags.dat'
-        fits_file_i = folder+obj+'_i.fits'                  
+        fits_file_i = folder+'AGC198606_i.fits'                  
         fits_i = fits.open(fits_file_i)
         
         dm = objects[obj]
@@ -33,7 +36,7 @@ def main():
         # read in magnitudes, colors, and positions(x,y)
         # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
         gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
-        # print len(gxr), "total stars"
+        print len(gxr), "total stars"
         fwhm_sr = np.ones_like(gxr)
         # filter out the things with crappy color errors
         color_error_cut = np.sqrt(2.0)*0.2
@@ -49,7 +52,8 @@ def main():
         i_mag = [i_magr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
         i_ierr = np.array([i_ierrr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))])
         gmi = [gmir[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
-        fwhm_s = [fwhm_sr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+        fwhm_s = [fwhm_sr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))] 
+        kept_stars = [i for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
         gmi_err = np.array([np.sqrt(g_ierrr[i]**2 + i_ierrr[i]**2) for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))])
         
         i_ierrAVG, bedges, binid = ss.binned_statistic(i_mag,i_ierr,statistic='median',bins=10,range=[15,25])
@@ -120,17 +124,38 @@ def main():
         i_x_f = [ix[i] for i in range(len(i_mag)) if (stars_f[i])]
         i_y_f = [iy[i] for i in range(len(i_mag)) if (stars_f[i])]
         fwhm_sf = [fwhm_s[i] for i in range(len(i_mag)) if (stars_f[i])]
+        filtered = [i for i in range(len(i_mag)) if (stars_f[i])]
+        # print filtered
         n_in_filter = len(i_mag_f)
+        
+        if 'new' in obj:
+            kept1 = kept_stars
+            filtered1 = np.array(filtered)
+            i_ra1 = np.array(i_ra)
+            i_dec1 = np.array(i_dec)
+            xmin1, ymin1 = np.absolute(w.all_world2pix((8.2/60)+ra_corner, (8.1/60)+dec_corner,1))
+            xmax1, ymax1 = np.absolute(w.all_world2pix((14.2/60)+ra_corner, (14.1/60)+dec_corner,1))
+            # print xmin1, xmax1, ymin1, ymax1
+        if 'old' in obj:
+            kept2 = kept_stars
+            filtered2 = np.array(filtered)
+            i_ra2 = np.array(i_ra)
+            i_dec2 = np.array(i_dec)
+            xmin2, ymin2 = np.absolute(w.all_world2pix((8.2/60)+ra_corner, (8.1/60)+dec_corner,1))
+            xmax2, ymax2 = np.absolute(w.all_world2pix((14.2/60)+ra_corner, (14.1/60)+dec_corner,1))
+            # print xmin2, xmax2, ymin2, ymax2
         
         fwhm = smooths[obj]
         xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm, width, height)
+        print yedges[y_cent], xedges[x_cent]
+        
         
         # xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra, i_dec, 2.0, width, height)
         
         cosd = lambda x : np.cos(np.deg2rad(x))
         sind = lambda x : np.sin(np.deg2rad(x))
         
-        hi_x_circ, hi_y_circ = getHIellipse(obj, ra_corner, dec_corner)
+        hi_x_circ, hi_y_circ = getHIellipse('AGC198606', ra_corner, dec_corner)
         # hi_c_x, hi_c_y = abs((hi_c_ra-ra_corner)*60), abs((hi_c_dec-dec_corner)*60)
         # 
         # t = np.array(range(0,359,1))
@@ -175,7 +200,9 @@ def main():
         
         ax2 = plt.Subplot(fig, inner[1])
         extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
-        im = ax2.imshow(S, extent=extent, interpolation='nearest',cmap=cm.gray)
+        im = ax2.imshow(S, extent=extent, interpolation='none',cmap=cm.gray)
+        ax2.scatter(i_ra, i_dec,  color='black', marker='o', s=1, edgecolors='none')
+        ax2.scatter(i_ra_f, i_dec_f,  c='red', marker='o', s=10, edgecolors='none')
         # cbar_S = plt.colorbar()
         # cbar_S.set_label('$\sigma$ from local mean')
         ax2.plot(hi_x_circ,hi_y_circ,linestyle='-', color='limegreen')
@@ -190,14 +217,58 @@ def main():
             ax2.set_title('AGC219656', size='small')
         else:
             ax2.set_title(obj, size='small')
-        ax2.set_xlim(0,max(i_ra))
-        ax2.set_ylim(0,max(i_dec))
+        ax2.set_xlim(8.2,14.2)
+        ax2.set_ylim(8.1,14.1)
         # im.set_clim(-3, 3)
         ax2.set_aspect('equal')
         fig.add_subplot(ax2)
         
     outer.tight_layout(fig)
-    plt.savefig('detections.pdf')
+    plt.savefig('friend_comp.pdf')
+    
+    x1, y1, mag2x1, fwhm1, mag1x1 = np.loadtxt('/Volumes/galileo/uchvc/targets/agc198606/escut_i.pos', usecols=(0,1,2,3,4), unpack=True)
+    x1, y1, mag2x1, fwhm1 = x1[kept1], y1[kept1], mag2x1[kept1], fwhm1[kept1]
+    box1 = [j for j,f in enumerate(x1) if (x1[j] > xmin1 and x1[j] < xmax1 and y1[j] > ymin1 and y1[j] < ymax1)]
+    keep1 = [j for j,f in enumerate(x1) if (j in filtered1 and x1[j] > xmin1 and x1[j] < xmax1 and y1[j] > ymin1 and y1[j] < ymax1)]
+    # mag2x1 = mag2x1[keep1]
+    # fwhm1 = fwhm1[keep1]
+    
+    x2, y2, mag2x2, fwhm2, fi = np.loadtxt('/Volumes/galileo/uchvc/targets/agc198606_correct_old/point_source_info', usecols=(0,1,4,8,10), dtype=str, unpack=True)
+    istars = [j for j,f in enumerate(fi) if (f.endswith('i'))]
+    x2, y2, mag2x2, fwhm2 = x2[istars].astype(float), y2[istars].astype(float), mag2x2[istars].astype(float), fwhm2[istars].astype(float)
+    x2, y2, mag2x2, fwhm2 = x2[kept2], y2[kept2], mag2x2[kept2], fwhm2[kept2]
+    box2 = [j for j,f in enumerate(x2) if (x2[j] > xmin2 and x2[j] < xmax2 and y2[j] > ymin2 and y2[j] < ymax2)]
+    keep2 = [j for j,f in enumerate(x2) if (j in filtered2 and x2[j] > xmin2 and x2[j] < xmax2 and y2[j] > ymin2 and y2[j] < ymax2)]
+    # mag2x2 = mag2x2[keep2]
+    # fwhm2 = fwhm2[keep2]
+    
+    fig2 = plt.figure(figsize=(8,4))
+    ax3 = plt.subplot(121)
+    ax3.scatter(i_ra1, i_dec1,  c='none', marker='o', s=20, lw=0.5, edgecolors='black')
+    ax3.scatter(i_ra2, i_dec2,  c='black', marker='x', s=10, lw=0.5, edgecolors='none')
+    ax3.scatter(i_ra1[filtered1], i_dec1[filtered1],  c='none', marker='o', s=20, lw=1.0, edgecolors='red', label='this work')
+    ax3.scatter(i_ra2[filtered2], i_dec2[filtered2],  c='blue', marker='x', s=10, lw=1.0, edgecolors='none', label='J15')
+    ax3.set_xlim(8.2,14.2)
+    ax3.set_ylim(8.1,14.1)
+    ax3.set_ylabel('Dec (arcmin)')
+    ax3.set_xlabel('RA (arcmin)')
+    ax1.set_title('$m-M = ${:5.2f} | $d = ${:4.2f} Mpc'.format(22.89, 0.38), size='small')
+    ax3.set_aspect('equal')
+    plt.legend(loc='upper left')
+    # plt.savefig('star_overlap.pdf')
+    
+    # fig3 = plt.figure(figsize=(6,3))
+    ax4 = plt.subplot(122)
+    ax4.scatter(mag2x1[box1], fwhm1[box1], c='none', marker='o', s=20, lw=0.5, edgecolors='black')
+    ax4.scatter(mag2x2[box2], fwhm2[box2], c='black', marker='x', s=10, lw=0.5, edgecolors='none')
+    ax4.scatter(mag2x1[keep1], fwhm1[keep1], c='none', marker='o', s=20, lw=1.0, edgecolors='red')
+    ax4.scatter(mag2x2[keep2], fwhm2[keep2], c='blue', marker='x', s=10, lw=1.0, edgecolors='none')
+    ax4.set_xlim(-11,1)
+    ax4.set_ylim(0,14)
+    ax4.set_ylabel('FWHM (pixels)')
+    ax4.set_xlabel('inst. mag')
+    plt.tight_layout()
+    plt.savefig('escut_comp.pdf')
         
     pass
 
