@@ -522,7 +522,7 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     
     return xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl 
 
-def distfit(n,dists,title,width,height,fwhm,dm,samples=100):
+def distfit(n,dists,title,width,height,fwhm,dm,samples=1000):
     from scipy.stats import lognorm
 
     bins_h = int(height * 60. / 8.)

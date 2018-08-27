@@ -13,15 +13,15 @@ from collections import OrderedDict
 from magfilter import deg2HMS, grid_smooth, getHIellipse, dist2HIcentroid, make_filter, filter_sources, distfit, dm_sigplot
 
 def main():
-    objects = OrderedDict([('AGC198606',24.72), ('AGC215417',22.69), ('AGC249525',26.78), ('AGC268069',24.24),  ('HI0932+24',26.87), ('HI1151+20',24.76)])
+    objects = OrderedDict([('AGC249525',26.78)])
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     
-    fwhm_sm = 2.0
-    fwhm_sm_string = '2.0'
+    fwhm_sm = 3.0
+    fwhm_sm_string = '3.0'
     
     # plt.clf()
-    fig = plt.figure(figsize=(10,7))
-    outer = gridspec.GridSpec(3,2, wspace=0.1, hspace=0.1)
+    fig = plt.figure(figsize=(9,4))
+    outer = gridspec.GridSpec(1,1, wspace=0.1, hspace=0.1)
     for i, obj in enumerate(objects.keys()):
         print obj
         inner = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=outer[i], wspace=0.1, hspace=0.1)
@@ -111,6 +111,7 @@ def main():
         sig_bins = []
         sig_cens = []
         sig_max = []
+        pcts = []
         
         dms = np.arange(22.0,27.0,0.01)
         
@@ -138,11 +139,12 @@ def main():
             n_in_filter = len(i_mag_f)
             
             xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm_sm, width, height)
-            pct, d_bins, d_cens = distfit(n_in_filter,S[x_cent_S][y_cent_S],obj,width,height,fwhm_sm,dm)
+            pct, d_bins, d_cens = distfit(n_in_filter,S[x_cent_S][y_cent_S],obj,width,height,fwhm_sm,dm, samples=1000)
             
             sig_bins.append(d_bins)
             sig_cens.append(d_cens)
             sig_max.append(S[x_cent_S][y_cent_S])
+            pcts.append(pct)
             
             circ_c_x = ra_corner-(yedges[y_cent]/60.)
             circ_c_y = (xedges[x_cent]/60.)+dec_corner
@@ -157,11 +159,12 @@ def main():
         
         ax1 = plt.Subplot(fig, inner[0])
         ax1.imshow(np.transpose(sig_bins), cmap=plt.cm.Reds, extent=(22, 27, 22, 2))#, origin=origin)
-        ax1.plot(dms, sig_max, linestyle='-', color='black', lw=0.5)
+        ax1.scatter(dms, sig_max, linestyle='-', c=pcts, cmap=plt.cm.Blues)
         ax1.set_ylabel('$\sigma$')
         ax1.set_xlabel('distance modulus')
         ax1.set_xlim(22,27)
         ax1.set_ylim(2,6.5)
+        ax1.vlines([26.07, 26.78], 2, 6.5, linestyles='dashed', lw=0.5)
         if obj.startswith('HI1151'):
             ax1.set_title('AGC219656', size='small')
         else:
