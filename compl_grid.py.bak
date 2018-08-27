@@ -9,7 +9,7 @@ from scipy import interpolate
 from scipy.optimize import curve_fit
 from scipy.special import erfc
 import matplotlib.pyplot as plt
-from odi_calibrate import download_sdss, js_calibrate, get_calibration
+from odi_calibrate import download_sdss, js_calibrate
 
 def cubic(x, a, b, c, d):
     return a*x**3 + b*x**2 + c*x + d
@@ -43,19 +43,17 @@ def main():
     gi, complgu = np.loadtxt('ctable_g.out', usecols=(0,1), unpack=True)
     ii, compliu = np.loadtxt('ctable_i.out', usecols=(0,1), unpack=True)
     
-    # print(g_i,i_i,complg,compli)
-
     fg = interpolate.interp1d(g_i, complg, kind=3)
     fi = interpolate.interp1d(i_i, compli, kind=3)
     
-    xnew = np.arange(-6.0,0.89, 0.01)
+    xnew = np.arange(-6.0,-0.95, 0.01)
     
-    # download_sdss(fits_g, fits_i, gmaglim = 22.0)
-    eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = get_calibration()
+    download_sdss(fits_g, fits_i, gmaglim = 22.0)
+    eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i = js_calibrate(img1 = fits_g, img2 = fits_i, verbose=False)
     
     # get some auxiliary info from the phot output
-    gXAIRMASS = np.loadtxt(fits_g[0:-5]+'_cal_js.sdssphot', usecols=(9,), dtype=str, unpack=True)
-    iXAIRMASS = np.loadtxt(fits_i[0:-5]+'_cal_js.sdssphot', usecols=(9,), dtype=str, unpack=True)
+    gXAIRMASS = np.loadtxt(fits_g[0:-5]+'_cal.sdssphot', usecols=(9,), dtype=str, unpack=True)
+    iXAIRMASS = np.loadtxt(fits_i[0:-5]+'_cal.sdssphot', usecols=(9,), dtype=str, unpack=True)
     # keep the airmasses and aperture radii as single values
     gXAIRMASS, iXAIRMASS = gXAIRMASS.astype(float)[0], iXAIRMASS.astype(float)[0]
     
@@ -99,13 +97,13 @@ def main():
     g_js = np.array(g_js)
     i_js = np.array(i_js)
     
-    # print(g_js, i_js)
+    print g_js, i_js
     
     p_g, pcov_g = curve_fit(erfc_p, g_js, complgu, p0=[25., 1.0, 1.0])
     p_i, pcov_i = curve_fit(erfc_p, i_js, compliu, p0=[25., 1.0, 1.0])
     
-    # print(p_g)
-    # print(p_i)
+    print p_g
+    print p_i
     
     magplot = np.arange(21.0, 27.0, 0.01)
     
@@ -144,7 +142,7 @@ def main():
     
     minuscomp = np.absolute(compi_gmi-0.5)
     index50 = np.argmin(minuscomp, axis=0)
-    print(index50.size, i_magjs.size, gmi_a.size)
+    print index50.size, i_magjs.size, gmi_a.size
     line_gmi = []
     line_i = []
     with open('i_gmi_compl.gr.out','w+') as f:
@@ -152,7 +150,7 @@ def main():
             if index50[k] > 0:
                 line_gmi.append(gmi_a[k])
                 line_i.append(i_magjs[index50[k]])
-                print(gmi_a[k], i_magjs[index50[k]], compi_gmi[index50[k]][k], file=f)
+                print >> f, gmi_a[k], i_magjs[index50[k]], compi_gmi[index50[k]][k]
     line_gmi = np.array(line_gmi)
     line_i = np.array(line_i)
     

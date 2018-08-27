@@ -44,8 +44,8 @@ for filter_ in filters_:
     threshold = float(coordLines[27].split()[3])
     coordFile.close()
     
-    print(objname, filter_, fwhm, sigma, threshold)
-    print('creating psf...')
+    print objname, filter_, fwhm, sigma, threshold
+    print 'creating psf...'
     
     iraf.images(_doprint=0)
     iraf.tv(_doprint=0)
@@ -128,8 +128,8 @@ for filter_ in filters_:
     inst_mags = np.arange(max_mag, 1.0, step)
     
     cTable = open('ctable_'+filter_+'.out','w+')
-    print("# Inst mag bin    % Complete", file=cTable)
-    print("#   ", file=cTable)
+    print >> cTable, "# Inst mag bin    % Complete"
+    print >> cTable, "#   "
     
     for mag in inst_mags:
         art_img = compl+objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'.fits'
@@ -142,18 +142,18 @@ for filter_ in filters_:
         match_file = compl+objname+'_'+filter_+'_crop_add.'+'{:+4.1f}'.format(mag)+'_tmatch.tdump'
         next_mag = mag + step
         
-        print('adding stars')
+        print 'adding stars'
         iraf.daophot.addstar(img, "", psf_img, art_img, next_mag, mag, nartstars, verbose='no', verify='no', mode='h')
-        print('detecting sources')
+        print 'detecting sources'
         iraf.daophot.daofind(art_img, dao_coo, verbose='no', verify='no', mode='h')
-        print('photing sources')
+        print 'photing sources'
         iraf.phot(art_img, dao_coo, phot_out, "", verbose='no', verify='no', mode='h')
         iraf.images.imdel(art_img, "yes", verify='no', mode='h')
     
     # g image pselects
     # for file_ in glob.glob('*add*.mag.1'):
         if not os.path.isfile(phot_out+'a'):
-            print('pselect-ing', phot_out)
+            print 'pselect-ing', phot_out
             if os.path.isfile('temp2') :    
                 os.remove('temp2')
             iraf.ptools.pselect(infi=phot_out, outfi='temp1', expr="MAG != INDEF")
@@ -172,7 +172,7 @@ for filter_ in filters_:
     # for file_ in glob.glob('*.art'):
     
         if not os.path.isfile(art_coo+'.1a'):
-            print('pselect-ing', art_coo)
+            print 'pselect-ing', art_coo
             if os.path.isfile('temp2') :    
                 os.remove('temp2')
             iraf.ptools.pselect(infi=art_coo, outfi='temp1', expr="MAG != INDEF")
@@ -190,12 +190,12 @@ for filter_ in filters_:
     
     # for file_ in glob.glob('*.pselect'):
         if not os.path.isfile(art_tab):
-            print('creating artificial star table from', art_coo+'.1a')
+            print 'creating artificial star table from', art_coo+'.1a'
             iraf.tables.tcreate.setParam("nlines",0)
             iraf.tables.tcreate(art_tab, os.path.dirname(os.path.abspath(__file__))+"/art_table.description", art_coo+'.1a')
         
     # for file_ in glob.glob('*.mag.1a'):
-        print('reformatting', phot_out)
+        print 'reformatting', phot_out
         f1 = open(phot_out, 'r')
         f2 = open('temp1', 'w')
         for line in f1:
@@ -208,7 +208,7 @@ for filter_ in filters_:
         os.remove(phot_out)
         os.rename('temp1', phot_out)
         if not os.path.isfile(phot_tab):
-            print('creating phot table from', phot_out)
+            print 'creating phot table from', phot_out
             iraf.tables.tcreate.setParam("nlines",5)
             iraf.tables.tcreate(phot_tab, os.path.dirname(os.path.abspath(__file__))+"/phot_table.description", phot_out)
         
@@ -220,7 +220,7 @@ for filter_ in filters_:
     # 
     # for i in range(len(artFiles)):
     #     if not os.path.isfile(namedFiles[i][0:9]+'.'+filter_+"."+artFiles[i][-8:-4]+"_tmatch.tab"):
-        print('matching',art_tab, '&', phot_tab)
+        print 'matching',art_tab, '&', phot_tab
         iraf.tables.tmatch(art_tab, phot_tab, match_tab, "xcen,ycen", "xinit,yinit", 6.)
         if not os.path.isfile(match_file):
             iraf.tables.tdump.setParam('datafile',match_file)
@@ -235,6 +235,6 @@ for filter_ in filters_:
         iraf.tables.tinfo(match_tab)
         matchk = iraf.tables.tinfo.getParam('nrows')
         pct = float(matchk)/float(artk)
-        print(mag, pct)
-        print(" ",mag,"        ",pct, file=cTable)
+        print mag, pct
+        print >> cTable, " ",mag,"        ",pct
     cTable.close()

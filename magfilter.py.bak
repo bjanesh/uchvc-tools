@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/local/bin/python
 # -*- coding: utf-8 -*-
 import os, sys, getopt, warnings
 import numpy as np
@@ -17,7 +17,7 @@ from photutils.utils import random_cmap
 try :
     from scipy import ndimage
 except ImportError :
-    print('bad import')
+    print 'bad import'
 
 def downloadSDSSgal(img1, img2):
     formats = ['csv','xml','html']
@@ -36,9 +36,9 @@ def downloadSDSSgal(img1, img2):
         import os
         import string
     except ImportError:
-        print("You should 'pip install astropy' before you try to run this program") 
+        print "You should 'pip install astropy' before you try to run this program" 
     
-    print('fetching SDSS data from \n--> '+public_url)
+    print 'fetching SDSS data from \n--> '+public_url
     
     image = img1
     
@@ -114,7 +114,7 @@ def downloadSDSSgal(img1, img2):
         qry = "select O.ra, O.dec, O.u, O.err_u, O.g, \nO.err_g, O.r, O.err_r, O.i, \nO.err_i, O.z, O.err_z, O.probPSF \nfrom \ndbo.fGetNearbyObjEq("+repr(rac)+","+repr(decc)+","+repr(sizeam)+") \nas N inner join PhotoObjAll as O on O.objID = N.objID order by N.distance"
     
         # print it to the terminal
-        print('with query\n-->', qry)
+        print 'with query\n-->', qry
         url = default_url
         fmt = default_fmt
         writefirst = 1
@@ -142,25 +142,25 @@ def downloadSDSSgal(img1, img2):
     ras,decs,u,err_u,g,err_g,r,err_r,i,err_i,z,err_z = np.loadtxt(image[:-5]+'.sdssgal',usecols=(0,1,2,3,4,5,6,7,8,9,10,11), unpack=True, delimiter=',', skiprows=2)
     probPSF = np.loadtxt(image[:-5]+'.sdssgal', usecols=(12,), dtype=int, unpack=True, delimiter=',', skiprows=2)
     
-    coords2 = list(zip(ras,decs))
+    coords2 = zip(ras,decs)
     pixcrd2 = w.wcs_world2pix(coords2, 1)
     pixcrd2_r = w_r.wcs_world2pix(coords2, 1)
     
     # keep things that are actually stars (defined as being psf's) and with the right magnitude range (arbitrary)
     
     keep_stars = ((probPSF == 0))# (psfMag_g < gmaglim) & (psfMagErr_g <0.1) & (psfMag_g > gmagbrlim))
-    print('keeping', len(np.where(keep_stars)[0]), 'galaxies of', len(g), 'sources')
+    print 'keeping', len(np.where(keep_stars)[0]), 'galaxies of', len(g), 'sources'
     
     # then write out separate files for g and i
     with open(image[:-5]+'.galxy','w+') as f1:
-        print("# x_g y_g ra dec u uerr g gerr r rerr i ierr z zerr (all modelmags)", file=f1)
+        print >> f1, "# x_g y_g ra dec u uerr g gerr r rerr i ierr z zerr (all modelmags)"
         for j,id in enumerate(np.where(keep_stars)[0]):
-            print(pixcrd2[id][0], pixcrd2[id][1], ras[id], decs[id], u[id], err_u[id], g[id], err_g[id], r[id], err_r[id], i[id], err_i[id], z[id], err_z[id], file=f1)
+            print >> f1, pixcrd2[id][0], pixcrd2[id][1], ras[id], decs[id], u[id], err_u[id], g[id], err_g[id], r[id], err_r[id], i[id], err_i[id], z[id], err_z[id]
             
     with open(img2[:-5]+'.galxy','w+') as f1:
-        print("# x_r y_r ra dec u uerr g gerr r rerr i ierr z zerr (all modelmags)", file=f1)
+        print >> f1, "# x_r y_r ra dec u uerr g gerr r rerr i ierr z zerr (all modelmags)"
         for j,id in enumerate(np.where(keep_stars)[0]):
-            print(pixcrd2_r[id][0], pixcrd2_r[id][1], ras[id], decs[id], u[id], err_u[id], g[id], err_g[id], r[id], err_r[id], i[id], err_i[id], z[id], err_z[id], file=f1)
+            print >> f1, pixcrd2_r[id][0], pixcrd2_r[id][1], ras[id], decs[id], u[id], err_u[id], g[id], err_g[id], r[id], err_r[id], i[id], err_i[id], z[id], err_z[id]
 
     
 def galaxyMap(fits_file_i, fwhm, dm, filter_file):
@@ -169,7 +169,7 @@ def galaxyMap(fits_file_i, fwhm, dm, filter_file):
     gmi = g-i
     gmierr = [np.sqrt(gerr[j]**2 + ierr[j]**2) for j in range(len(g))]
     
-    pixcrd = list(zip(x_r,y_r))
+    pixcrd = zip(x_r,y_r)
     
     fits_i = fits.open(fits_file_i)
     # Parse the WCS keywords in the primary HDU
@@ -200,7 +200,7 @@ def galaxyMap(fits_file_i, fwhm, dm, filter_file):
         stars_f = filter_sources(i, ierr, gmi, gmierr, cm_filter, filter_sig = 1, gal=True)
     else:
         stars_f = [True] * i
-    xy_points = list(zip(i_ra,i_dec))
+    xy_points = zip(i_ra,i_dec)
     
     # make new vectors containing only the filtered points
     
@@ -274,7 +274,7 @@ def getHIellipse(object, ra_corner, dec_corner, centroid=False):
     
     a, b, pa = a.astype(float)/2., b.astype(float)/2., -pa.astype(float)
     
-    t = np.array(list(range(0,359,1)))
+    t = np.array(range(0,359,1))
     ell = np.array([a*cosd(t) , b*sind(t)])
     rot = np.array([[cosd(pa) , -sind(pa)],[sind(pa) , cosd(pa)]])
     ell_rot = np.zeros((2,ell.shape[1]))
@@ -331,7 +331,7 @@ def getHIcoincidence(x, y, object, ra_corner, dec_corner, height, width, dm):
     
     a, b, pa = a.astype(float)/2., b.astype(float)/2., -pa.astype(float)
     
-    t = np.array(list(range(0,359,1)))
+    t = np.array(range(0,359,1))
     ell = np.array([a*cosd(t) , b*sind(t)])
     rot = np.array([[cosd(pa) , -sind(pa)],[sind(pa) , cosd(pa)]])
     ell_rot = np.zeros((2,ell.shape[1]))
@@ -418,7 +418,7 @@ def make_filter(dm, filter_file):
     if filter_file.endswith("iso_filter.txt") :
         gi_iso,i_iso = np.loadtxt(filter_file, usecols=(0,1),unpack=True)
         i_m_iso = i_iso + dm
-        verts = list(zip(gi_iso,i_m_iso))        # set up the Path necessary for testing membership
+        verts = zip(gi_iso,i_m_iso)        # set up the Path necessary for testing membership
         cm_filter = Path(verts)
         
     elif filter_file == 'none':
@@ -429,7 +429,7 @@ def make_filter(dm, filter_file):
         g_iso,i_iso = np.loadtxt(filter_file, usecols=(8,10),unpack=True)
         gi_iso = g_iso - i_iso
         i_m_iso = i_iso + dm
-        verts = list(zip(gi_iso,i_m_iso))        # set up the Path necessary for testing membership
+        verts = zip(gi_iso,i_m_iso)        # set up the Path necessary for testing membership
         cm_filter = Path(verts)     # scale the filter to the DM: to find the apparent mag. just add the DM
     return cm_filter, gi_iso, i_m_iso
 
@@ -438,7 +438,7 @@ def filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1, gal =
         stars_f = [True] * len(gmi)
     # first get the stars that are in the filter (points & 1-sig error bars!)
     elif gal:
-        print(min(cm_filter.vertices[:,1]))
+        print min(cm_filter.vertices[:,1])
         stars_f = (0.75 < gmi) & (1.5 > gmi) & (min(cm_filter.vertices[:,1]) < i_mag)
     else:
         stars_f = list(gmi)
@@ -482,7 +482,7 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
     density = float(len(i_ra_f))/(float(bins_h)*float(bins_w))
     
     grid, xedges, yedges = np.histogram2d(i_dec_f, i_ra_f, bins=[bins_h,bins_w], range=[[0,height],[0,width]])
-    hist_points = list(zip(xedges,yedges))
+    hist_points = zip(xedges,yedges)
 
     sig = ((bins_w/width)*fwhm)/2.355
     sig3 = ((bins_w/width)*3.0)/2.355
@@ -532,9 +532,9 @@ def distfit(n,dists,title,width,height,fwhm,dm,samples=100):
     for i in range(samples) :
         random_ra = width*np.random.random_sample((n,))
         random_dec = height*np.random.random_sample((n,))
-        random_xy = list(zip(random_ra,random_dec))
+        random_xy = zip(random_ra,random_dec)
         grid_r, xedges_r, yedges_r = np.histogram2d(random_dec, random_ra, bins=[bins_h,bins_w], range=[[0,height],[0,width]])
-        hist_points_r = list(zip(xedges_r,yedges_r))
+        hist_points_r = zip(xedges_r,yedges_r)
         grid_gaus_r = ndimage.filters.gaussian_filter(grid_r, sig, mode='constant', cval=0)
         S_r = np.array(grid_gaus_r*0)
 
@@ -662,7 +662,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
     cutleft = [i for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
     with open('cutleft.txt', 'w+') as spud:
         for i,item in enumerate(cutleft):
-            print(item, file=spud)
+            print >> spud, item
     
     i_ierrAVG, bedges, binid = ss.binned_statistic(i_mag,i_ierr,statistic='median',bins=10,range=[15,25])
     gmi_errAVG, bedges, binid = ss.binned_statistic(i_mag,gmi_err,statistic='median',bins=10,range=[15,25])
@@ -674,7 +674,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
     # print gmi_errAVG
     # print len(gx), "after color+mag error cut"
     # nid = np.loadtxt(mag_file,usecols=(0,),dtype=int,unpack=True)
-    pixcrd = list(zip(ix,iy))
+    pixcrd = zip(ix,iy)
     
     
     # print "Reading WCS info from image header..."
@@ -732,7 +732,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
     if not os.path.isfile('brightStars2275.reg'):
         f1 = open('brightStars2275.reg', 'w+')
         for i in range(len(i_magBright)) :
-            print('{0:12.4f} {1:12.4f} {2:10.5f} {3:9.5f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(ixBright[i],iyBright[i], i_radBright[i], i_decdBright[i], g_magBright[i], i_magBright[i], g_magBright[i]-i_magBright[i]), file=f1)
+            print >> f1, '{0:12.4f} {1:12.4f} {2:10.5f} {3:9.5f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(ixBright[i],iyBright[i], i_radBright[i], i_decdBright[i], g_magBright[i], i_magBright[i], g_magBright[i]-i_magBright[i])
         f1.close()
     
     i_magRed = [i_mag[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
@@ -745,7 +745,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
     if not os.path.isfile('redStars175.reg'):
         f1 = open('redStars175.reg', 'w+')
         for i in range(len(i_magRed)) :
-            print('{0:12.4f} {1:12.4f} {2:10.5f} {3:9.5f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(ixRed[i],iyRed[i], i_radRed[i], i_decdRed[i], g_magRed[i], i_magRed[i], g_magRed[i]-i_magRed[i]), file=f1)
+            print >> f1, '{0:12.4f} {1:12.4f} {2:10.5f} {3:9.5f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(ixRed[i],iyRed[i], i_radRed[i], i_decdRed[i], g_magRed[i], i_magRed[i], g_magRed[i]-i_magRed[i])
         f1.close()
     
     if dm2 > 0.0 and filter_string != 'none':
@@ -774,7 +774,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         cm_filter, gi_iso, i_m_iso = make_filter(dm, filter_file)
         stars_f = filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1)
         
-        xy_points = list(zip(i_ra,i_dec))
+        xy_points = zip(i_ra,i_dec)
         
         # make new vectors containing only the filtered points
         
@@ -803,7 +803,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         sig_cens.append(d_cens)
         sig_max.append(S[x_cent_S][y_cent_S])
         
-        if pct > 100 :
+        if pct > 90 :
             pct, bj,cj = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm, samples=25000)
         
         # make a circle to highlight a certain region
@@ -812,7 +812,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         x_circ = [yedges[y_cent] + 3.0*cosd(t) for t in range(0,359,1)]
         y_circ = [xedges[x_cent] + 3.0*sind(t) for t in range(0,359,1)]
         
-        verts_circ = list(zip(x_circ,y_circ))
+        verts_circ = zip(x_circ,y_circ)
         circ_filter = Path(verts_circ)
         
         stars_circ = circ_filter.contains_points(xy_points)    
@@ -832,14 +832,14 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
             rCentx = 16.0*np.random.random()+2.0
             rCenty = 16.0*np.random.random()+2.0
             with open('refCircle.center','w+') as rc:
-                print('{:8.4f} {:8.4f}'.format(rCentx, rCenty), file=rc)
+                print >> rc, '{:8.4f} {:8.4f}'.format(rCentx, rCenty)
         else :
             rCentx, rCenty = np.loadtxt('refCircle.center', usecols=(0,1), unpack=True)
                 
         x_circr = [rCentx + 3.0*cosd(t) for t in range(0,359,1)]
         y_circr = [rCenty + 3.0*sind(t) for t in range(0,359,1)]
         
-        verts_circr = list(zip(x_circr,y_circr))
+        verts_circr = zip(x_circr,y_circr)
         rcirc_filter = Path(verts_circr)
         
         stars_circr = rcirc_filter.contains_points(xy_points)    
@@ -869,7 +869,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         index_fc = [i for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
         with open('index_fc.txt', 'w+') as spud1:
             for i,item in enumerate(index_fc):
-                print(item, file=spud1)
+                print >> spud1, item
         
         # print len(i_mag_fc), 'filter stars in circle'
         
@@ -880,7 +880,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
             x_circ = [yedges[y_cent] + r/60.*cosd(t) for t in range(0,359,1)]
             y_circ = [xedges[x_cent] + r/60.*sind(t) for t in range(0,359,1)]
 
-            verts_circ = list(zip(x_circ,y_circ))
+            verts_circ = zip(x_circ,y_circ)
             circ_filter = Path(verts_circ)
 
             stars_circ = circ_filter.contains_points(xy_points)
@@ -890,7 +890,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
             fcirc_file = 'circle'+repr(r)+'.txt'
             with open(fcirc_file,'w+') as f3:
                 for i,x in enumerate(i_x_fc):
-                    print(i_x_fc[i], i_y_fc[i], file=f3)
+                    print >> f3, i_x_fc[i], i_y_fc[i]
         
         i_mag_fcr = [i_mag[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
         i_ierr_fcr = [i_ierr[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
@@ -934,38 +934,38 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         # print ra_c, dec_c
         # print hi_c_ra, hi_c_dec
         
-        print("m-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}' | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}% | η = {:6.3f}%".format(dm, mpc, ra_c_d, dec_c_d, sep/60., n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.))
-        print('{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep/60., n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.), file=search)        
+        print "m-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}' | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}% | η = {:6.3f}%".format(dm, mpc, ra_c_d, dec_c_d, sep/60., n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.)
+        print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep/60., n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.)        
 
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
         #iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no') 
         if pct > 90.:
             with open(ds9_file,'w+') as ds9:
-                print("fk5;circle({:f},{:f},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr), file=ds9)
-                print("fk5;circle({:f},{:f},2') # color=magenta width=2 label=detection".format(ra_c, dec_c), file=ds9)
-                print("fk5;circle({:f},{:f},0.5') # color=black width=2 label=HI".format(hi_c_ra, hi_c_dec), file=ds9)
+                print >> ds9, "fk5;circle({:f},{:f},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr)
+                print >> ds9, "fk5;circle({:f},{:f},2') # color=magenta width=2 label=detection".format(ra_c, dec_c)
+                print >> ds9, "fk5;circle({:f},{:f},0.5') # color=black width=2 label=HI".format(hi_c_ra, hi_c_dec)
             
             f1 = open(filter_reg, 'w+')
             for i in range(len(i_x_f)) :
-                print('image;circle({0:8.2f},{1:8.2f},10) # color=green width=2 edit=0 move=0 delete=0 highlite=0'.format(i_x_f[i],i_y_f[i]), file=f1)
+                print >> f1, 'image;circle({0:8.2f},{1:8.2f},10) # color=green width=2 edit=0 move=0 delete=0 highlite=0'.format(i_x_f[i],i_y_f[i])
             f1.close()
                 
             f1 = open(mark_file, 'w+')
             for i in range(len(i_x_f)) :
-                print('{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f} {7:7.3f}'.format(i_x_f[i],i_y_f[i],i_rad_f[i],i_decd_f[i],i_mag_f[i],g_mag_f[i],gmi_f[i],fwhm_sf[i]), file=f1)
+                print >> f1, '{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f} {7:7.3f}'.format(i_x_f[i],i_y_f[i],i_rad_f[i],i_decd_f[i],i_mag_f[i],g_mag_f[i],gmi_f[i],fwhm_sf[i])
             f1.close()
             
             f2 = open(circ_file, 'w+')
             for i in range(len(i_x_c)) :
-                print('{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f} {7:7.3f}'.format(i_x_c[i],i_y_c[i],i_rad_c[i],i_decd_c[i],i_mag_c[i],i_mag_c[i]+gmi_c[i],gmi_c[i],fwhm_sc[i]), file=f2)
+                print >> f2, '{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f} {7:7.3f}'.format(i_x_c[i],i_y_c[i],i_rad_c[i],i_decd_c[i],i_mag_c[i],i_mag_c[i]+gmi_c[i],gmi_c[i],fwhm_sc[i])
             f2.close()
             
             with open(fcirc_file,'w+') as f3:
                 for i,x in enumerate(i_x_fc):
-                    print(i_x_fc[i], i_y_fc[i], fwhm_sfc[i], file=f3)
+                    print >> f3, i_x_fc[i], i_y_fc[i], fwhm_sfc[i]
                     
             with open(circles_file,'w+') as f4:
-                print(circ_pix_x, circ_pix_y, file=f4)
+                print >> f4, circ_pix_x, circ_pix_y
             
             # center_file = 'im_cens_'+dm_string+'_'+fwhm_string+'.dat'
             # im_cens = open(center_file,'w+')
@@ -1134,16 +1134,16 @@ def main(argv):
     # fwhm_string = repr(fwhm)
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
     filter_string = 'old'
-    dm2 = 0.0
+    dm2 = None
 
     try:
         opts, args = getopt.getopt(argv,"h",["fwhm=","dm=","dm2="])
     except getopt.GetoptError:
-        print('magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --dm=<DM in mag>')
+        print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --dm=<DM in mag>'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --dm=<DM in mag>')
+            print 'magfilter.py --fwhm=<fwhm in arcmin> --dm=<DM in mag> --dm=<DM in mag>'
             sys.exit()
         elif opt in ("--fwhm"):
             fwhm = float(arg)        # in arcmin (7.5 pixels = 1 arcmin)

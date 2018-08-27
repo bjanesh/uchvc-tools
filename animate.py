@@ -1,0 +1,431 @@
+#! /usr/local/bin/python
+# -*- coding: utf-8 -*-
+import os
+import sys
+import warnings
+import numpy as np
+from astropy.io import fits
+from astropy import wcs
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+from matplotlib.path import Path
+from matplotlib import cm
+import scipy.stats as ss
+from collections import OrderedDict
+from magfilter import deg2HMS, grid_smooth, getHIellipse, make_filter, filter_sources, dist2HIcentroid
+
+def main():
+    objects = OrderedDict([('AGC198511',22.91), ('AGC198606',24.72), ('AGC215417',22.69), ('HI1151+20',24.76), ('AGC249525',26.78), ('AGC268069',24.24)])
+    smooths = OrderedDict([('AGC198511',3.0), ('AGC198606',2.0), ('AGC215417',3.0), ('HI1151+20',2.0), ('AGC249525',3.0), ('AGC268069',3.0)])
+    filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
+    
+    for file_ in os.listdir("./"):
+        if file_.endswith("i.fits"):
+            fits_file_i = file_
+ 
+    for file_ in os.listdir("./"):
+        if file_.endswith("g.fits"):
+            fits_file_g = file_
+    
+    # downloadSDSSgal(fits_file_g, fits_file_i)
+              
+    fits_i = fits.open(fits_file_i)
+    # fits_g = fits.open(fits_file_g)
+    # print "Opened fits files:",fits_file_g,"&",fits_file_i
+    
+    # objid = fits_i[0].header['OBJECT']
+    title_string = fits_file_i.split('_')[0]       # get the name part of the filename.
+
+    # set up some filenames
+    mag_file = 'calibrated_mags.dat'
+
+    # read in magnitudes, colors, and positions(x,y)
+    # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
+    gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
+    # print len(gxr), "total stars"
+    fwhm_sr = np.ones_like(gxr)
+    # filter out the things with crappy color errors
+    color_error_cut = np.sqrt(2.0)*0.2
+    mag_error_cut = 0.2
+    
+    gmi_errr = [np.sqrt(g_ierrr[i]**2 + i_ierrr[i]**2) for i in range(len(gxr))]
+    gx = [gxr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    gy = [gyr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    g_mag = [g_magr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    g_ierr = [g_ierrr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    ix = [ixr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    iy = [iyr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    i_mag = [i_magr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    i_ierr = np.array([i_ierrr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))])
+    gmi = [gmir[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    fwhm_s = [fwhm_sr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    gmi_err = np.array([np.sqrt(g_ierrr[i]**2 + i_ierrr[i]**2) for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))])
+    cutleft = [i for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
+    with open('cutleft.txt', 'w+') as spud:
+        for i,item in enumerate(cutleft):
+            print(item, file=spud)
+    
+    i_ierrAVG, bedges, binid = ss.binned_statistic(i_mag,i_ierr,statistic='median',bins=10,range=[15,25])
+    gmi_errAVG, bedges, binid = ss.binned_statistic(i_mag,gmi_err,statistic='median',bins=10,range=[15,25])
+    
+    bcenters = (bedges[:-1] + bedges[1:]) / 2
+    bxvals = [3.75,3.75,3.75,3.75,3.75,3.75,3.75,3.75,3.75,3.75]
+    # print bcenters
+    # print i_ierrAVG
+    # print gmi_errAVG
+    # print len(gx), "after color+mag error cut"
+    # nid = np.loadtxt(mag_file,usecols=(0,),dtype=int,unpack=True)
+    pixcrd = list(zip(ix,iy))
+    
+    
+    # print "Reading WCS info from image header..."
+    # Parse the WCS keywords in the primary HDU
+    warnings.filterwarnings('ignore', category=UserWarning, append=True)
+    w = wcs.WCS(fits_i[0].header)
+    # print fits_i[0].header['naxis1'], fits_i[0].header['naxis2']
+    footprint = w.calc_footprint()
+    se_corner = footprint[0]
+    ne_corner = footprint[1]
+    nw_corner = footprint[2]
+    sw_corner = footprint[3]
+    # print se_corner, ne_corner, nw_corner, sw_corner
+    width = (ne_corner[0]-nw_corner[0])*60.
+    height = (ne_corner[1]-se_corner[1])*60.
+    # print width, height
+    
+    # Print out the "name" of the WCS, as defined in the FITS header
+    # print w.wcs.name
+    
+    # Print out all of the settings that were parsed from the header
+    # w.wcs.print_contents()
+    
+    # Convert pixel coordinates to world coordinates
+    # The second argument is "origin" -- in this case we're declaring we
+    # have 1-based (Fortran-like) coordinates.
+    world = w.all_pix2world(pixcrd, 1)
+    ra_corner, dec_corner = w.all_pix2world(0,0,1)
+    ra_c_d,dec_c_d = deg2HMS(ra=ra_corner, dec=dec_corner, round=True)
+    # print 'Corner RA:',ra_c_d,':: Corner Dec:',dec_c_d
+        
+    fwhm_i = 12.0 #fits_i[0].header['FWHMPSF']
+    fwhm_g = 9.0 # fits_g[0].header['FWHMPSF']
+    
+    # print 'Image FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i)
+    
+    fits_i.close()
+    # fits_g.close()
+    
+    # split the ra and dec out into individual arrays and transform to arcmin from the corner
+    i_ra = [abs((world[i,0]-ra_corner)*60) for i in range(len(world[:,0]))]
+    i_dec = [abs((world[i,1]-dec_corner)*60) for i in range(len(world[:,1]))]
+    # also preserve the decimal degrees for reference
+    i_rad = [world[i,0] for i in range(len(world[:,0]))]
+    i_decd = [world[i,1] for i in range(len(world[:,1]))]
+    
+    
+    i_magBright = [i_mag[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+    g_magBright = [g_mag[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+    ixBright = [ix[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+    iyBright = [iy[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+    i_radBright = [i_rad[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+    i_decdBright = [i_decd[i] for i in range(len(i_mag)) if (i_mag[i] < 22.75)]
+    
+    if not os.path.isfile('brightStars2275.reg'):
+        f1 = open('brightStars2275.reg', 'w+')
+        for i in range(len(i_magBright)) :
+            print('{0:12.4f} {1:12.4f} {2:10.5f} {3:9.5f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(ixBright[i],iyBright[i], i_radBright[i], i_decdBright[i], g_magBright[i], i_magBright[i], g_magBright[i]-i_magBright[i]), file=f1)
+        f1.close()
+    
+    i_magRed = [i_mag[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+    g_magRed = [g_mag[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+    ixRed = [ix[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+    iyRed = [iy[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+    i_radRed = [i_rad[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+    i_decdRed = [i_decd[i] for i in range(len(i_mag)) if (gmi[i] > 1.75)]
+    
+    if not os.path.isfile('redStars175.reg'):
+        f1 = open('redStars175.reg', 'w+')
+        for i in range(len(i_magRed)) :
+            print('{0:12.4f} {1:12.4f} {2:10.5f} {3:9.5f} {4:8.2f} {5:8.2f} {6:8.2f}'.format(ixRed[i],iyRed[i], i_radRed[i], i_decdRed[i], g_magRed[i], i_magRed[i], g_magRed[i]-i_magRed[i]), file=f1)
+        f1.close()
+    
+    dm = 22.0
+    dm2 = 27.0
+    fwhm = 2.0
+    
+    # if dm2 > 0.0 and filter_string != 'none':
+    dms = np.arange(dm,dm2,0.01)
+        # search = open('search_{:3.1f}.txt'.format(fwhm),'w+')
+    # else:
+    #     dms = [dm]
+        # search = open('spud.txt'.format(fwhm),'w+')
+    
+    # sig_bins = []
+    # sig_cens = []
+    # sig_max = []
+
+    for dm in dms:
+        mpc = pow(10,((dm + 5.)/5.))/1000000.
+        dm_string = '{:5.2f}'.format(dm).replace('.','_')
+        
+        out_file = 'anim/anim_' + dm_string + '_' + title_string + '.png'
+        # mark_file = 'f_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+        # filter_reg = 'f_reg_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+        # circ_file = 'c_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+        # fcirc_file = 'fc_list_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+        # ds9_file = 'circles_' + filter_string + '_' + fwhm_string + '_' + dm_string + '_' + title_string + '.reg'
+        circles_file = 'region_coords.dat'
+        
+        cm_filter, gi_iso, i_m_iso = make_filter(dm, filter_file)
+        stars_f = filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1)
+        
+        xy_points = list(zip(i_ra,i_dec))
+        
+        # make new vectors containing only the filtered points
+        
+        i_mag_f = [i_mag[i] for i in range(len(i_mag)) if (stars_f[i])]
+        g_mag_f = [g_mag[i] for i in range(len(i_mag)) if (stars_f[i])]
+        gmi_f = [gmi[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_ra_f = [i_ra[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_dec_f = [i_dec[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_rad_f = [i_rad[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_decd_f = [i_decd[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_x_f = [ix[i] for i in range(len(i_mag)) if (stars_f[i])]
+        i_y_f = [iy[i] for i in range(len(i_mag)) if (stars_f[i])]
+        fwhm_sf = [fwhm_s[i] for i in range(len(i_mag)) if (stars_f[i])]
+        n_in_filter = len(i_mag_f)
+        
+        # xedgesg, x_centg, yedgesg, y_centg, Sg, x_cent_Sg, y_cent_Sg, pltsigg, tblg = galaxyMap(fits_file_i, fwhm, dm, filter_file)
+        
+        xedges, x_cent, yedges, y_cent, S, x_cent_S, y_cent_S, pltsig, tbl = grid_smooth(i_ra_f, i_dec_f, fwhm, width, height)
+        # corr = signal.correlate2d(S, Sg, boundary='fill', mode='full')
+        # print corr
+        
+        # pct, d_bins, d_cens = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm)
+        # pct_hi = 0.0 #getHIcoincidence(x_cent_S, y_cent_S, title_string, ra_corner, dec_corner, width, height, dm)
+        
+        # sig_bins.append(d_bins)
+        # sig_cens.append(d_cens)
+        # sig_max.append(S[x_cent_S][y_cent_S])
+        
+        # if pct > 90 :
+        #     pct, bj,cj = distfit(n_in_filter,S[x_cent_S][y_cent_S],title_string,width,height,fwhm,dm, samples=25000)
+        
+        # make a circle to highlight a certain region
+        cosd = lambda x : np.cos(np.deg2rad(x))
+        sind = lambda x : np.sin(np.deg2rad(x))
+        x_circ = [yedges[y_cent] + 3.0*cosd(t) for t in range(0,359,1)]
+        y_circ = [xedges[x_cent] + 3.0*sind(t) for t in range(0,359,1)]
+        
+        verts_circ = list(zip(x_circ,y_circ))
+        circ_filter = Path(verts_circ)
+        
+        stars_circ = circ_filter.contains_points(xy_points)    
+        
+        i_mag_c = [i_mag[i] for i in range(len(i_mag)) if (stars_circ[i])]
+        gmi_c = [gmi[i] for i in range(len(i_mag)) if (stars_circ[i])]
+        i_ra_c = [i_ra[i] for i in range(len(i_mag)) if (stars_circ[i])]
+        i_dec_c = [i_dec[i] for i in range(len(i_mag)) if (stars_circ[i])]
+        i_rad_c = [i_rad[i] for i in range(len(i_mag)) if (stars_circ[i])]
+        i_decd_c = [i_decd[i] for i in range(len(i_mag)) if (stars_circ[i])]
+        i_x_c = [ix[i] for i in range(len(i_mag)) if (stars_circ[i])]
+        i_y_c = [iy[i] for i in range(len(i_mag)) if (stars_circ[i])]
+        fwhm_sc = [fwhm_s[i] for i in range(len(i_mag)) if (stars_circ[i])]
+        
+        # make a random reference cmd to compare to
+        if not os.path.isfile('refCircle.center'):
+            rCentx = 16.0*np.random.random()+2.0
+            rCenty = 16.0*np.random.random()+2.0
+            with open('refCircle.center','w+') as rc:
+                print('{:8.4f} {:8.4f}'.format(rCentx, rCenty), file=rc)
+        else :
+            rCentx, rCenty = np.loadtxt('refCircle.center', usecols=(0,1), unpack=True)
+                
+        x_circr = [rCentx + 3.0*cosd(t) for t in range(0,359,1)]
+        y_circr = [rCenty + 3.0*sind(t) for t in range(0,359,1)]
+        
+        verts_circr = list(zip(x_circr,y_circr))
+        rcirc_filter = Path(verts_circr)
+        
+        stars_circr = rcirc_filter.contains_points(xy_points)    
+        
+        i_mag_cr = [i_mag[i] for i in range(len(i_mag)) if (stars_circr[i])]
+        gmi_cr = [gmi[i] for i in range(len(i_mag)) if (stars_circr[i])]
+        i_ra_cr = [i_ra[i] for i in range(len(i_mag)) if (stars_circr[i])]
+        i_dec_cr = [i_dec[i] for i in range(len(i_mag)) if (stars_circr[i])]
+        i_rad_cr = [i_rad[i] for i in range(len(i_mag)) if (stars_circr[i])]
+        i_decd_cr = [i_decd[i] for i in range(len(i_mag)) if (stars_circr[i])]
+        i_x_cr = [ix[i] for i in range(len(i_mag)) if (stars_circr[i])]
+        i_y_cr = [iy[i] for i in range(len(i_mag)) if (stars_circr[i])]
+        fwhm_scr = [fwhm_s[i] for i in range(len(i_mag)) if (stars_circr[i])]
+        
+        i_mag_fc = [i_mag[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        i_ierr_fc = [i_ierr[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        g_ierr_fc = [g_ierr[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        g_mag_fc = [i_mag[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        gmi_fc = [gmi[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        i_ra_fc = [i_ra[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        i_dec_fc = [i_dec[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        i_rad_fc = [i_rad[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        i_decd_fc = [i_decd[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        fwhm_sfc = [fwhm_s[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        index_fc = [i for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+        # with open('index_fc.txt', 'w+') as spud1:
+        #     for i,item in enumerate(index_fc):
+        #         print >> spud1, item
+        
+        # print len(i_mag_fc), 'filter stars in circle'
+        
+        # print 'max i mag in circle = ', min(i_mag_fc)
+        
+        rs = np.array([51, 77, 90, 180])
+        for r in rs:
+            x_circ = [yedges[y_cent] + r/60.*cosd(t) for t in range(0,359,1)]
+            y_circ = [xedges[x_cent] + r/60.*sind(t) for t in range(0,359,1)]
+
+            verts_circ = list(zip(x_circ,y_circ))
+            circ_filter = Path(verts_circ)
+
+            stars_circ = circ_filter.contains_points(xy_points)
+            i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+            i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
+
+            # fcirc_file = 'circle'+repr(r)+'.txt'
+            # with open(fcirc_file,'w+') as f3:
+            #     for i,x in enumerate(i_x_fc):
+            #         print >> f3, i_x_fc[i], i_y_fc[i]
+        
+        i_mag_fcr = [i_mag[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        i_ierr_fcr = [i_ierr[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        g_ierr_fcr = [g_ierr[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        g_mag_fcr = [i_mag[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        gmi_fcr = [gmi[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        i_ra_fcr = [i_ra[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        i_dec_fcr = [i_dec[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        i_rad_fcr = [i_rad[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        i_decd_fcr = [i_decd[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        i_x_fcr = [ix[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        i_y_fcr = [iy[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        fwhm_sfcr = [fwhm_s[i] for i in range(len(i_mag)) if (stars_circr[i] and stars_f[i])]
+        
+        rcirc_c_x = ra_corner-(rCentx/60.)
+        rcirc_c_y = (rCenty/60.)+dec_corner
+        rcirc_pix_x, rcirc_pix_y = w.wcs_world2pix(rcirc_c_x,rcirc_c_y,1)
+        ra_cr, dec_cr = w.all_pix2world(rcirc_pix_x, rcirc_pix_y,1)
+        ra_cr_d,dec_cr_d = deg2HMS(ra=ra_cr, dec=dec_cr, round=False)
+        
+        circ_c_x = ra_corner-(yedges[y_cent]/60.)
+        circ_c_y = (xedges[x_cent]/60.)+dec_corner
+        circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
+        ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
+        ra_c_d,dec_c_d = deg2HMS(ra=ra_c, dec=dec_c, round=False)
+        # print 'Peak RA:',ra_c_d,':: Peak Dec:',dec_c_d
+        
+        hi_x_circ, hi_y_circ = getHIellipse(title_string, ra_corner, dec_corner)
+        hi_c_ra, hi_c_dec = getHIellipse(title_string, ra_corner, dec_corner, centroid=True)        
+        hi_pix_x,hi_pix_y = w.wcs_world2pix(hi_c_ra,hi_c_dec,1)
+        
+        sep = dist2HIcentroid(ra_c_d, dec_c_d, hi_c_ra, hi_c_dec)
+        
+        # print "m-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}' | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}% | η = {:6.3f}%".format(dm, mpc, ra_c_d, dec_c_d, sep/60., n_in_filter, S[x_cent_S][y_cent_S], pct, pct_hi*100.)
+        
+        fig = plt.figure(figsize=(8,6))
+        # plot
+        # print "Plotting for m-M = ",dm
+        ax0 = plt.subplot(2,2,1)
+        plt.scatter(i_ra, i_dec,  color='black', marker='o', s=1, edgecolors='none')
+        plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
+        plt.plot(x_circr,y_circr,linestyle='-', color='gold')
+        plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='limegreen')
+        # plt.scatter(i_ra_c, i_dec_c,  color='red', marker='o', s=3, edgecolors='none')
+        plt.scatter(i_ra_f, i_dec_f,  c='red', marker='o', s=10, edgecolors='none')
+        # plt.clim(0,2)
+        # plt.colorbar()
+        plt.ylabel('Dec (arcmin)')
+        plt.xlim(0,max(i_ra))
+        plt.ylim(0,max(i_dec))
+        plt.title('sky positions')
+        ax0.set_aspect('equal')
+    
+        ax1 = plt.subplot(2,2,2)
+        
+        if os.path.isfile('i_gmi_compl.gr.out'):
+            gmiCompl, iCompl = np.loadtxt('i_gmi_compl.gr.out',usecols=(0,1),unpack=True)
+            plt.plot(gmiCompl,iCompl, linestyle='--', color='green')
+        if os.path.isfile('i_gmi_compl.gr2.out'):
+            gmiCompl, iCompl = np.loadtxt('i_gmi_compl.gr2.out',usecols=(0,1),unpack=True)
+            plt.plot(gmiCompl,iCompl, linestyle='--', color='red')
+        if os.path.isfile('i_gmi_compl2.out'):
+            iCompl,gmiCompl = np.loadtxt('i_gmi_compl2.out',usecols=(0,1),unpack=True)
+            plt.plot(gmiCompl,iCompl, linestyle='--', color='blue')
+        
+        plt.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
+        plt.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
+        plt.scatter(gmi_f, i_mag_f,  color='red', marker='o', s=15, edgecolors='none')
+
+        # plt.scatter(gmi_c, i_mag_c,  color='red', marker='o', s=3, edgecolors='none')
+        plt.errorbar(bxvals, bcenters, xerr=i_ierrAVG, yerr=gmi_errAVG, linestyle='None', color='black', capsize=0, ms=0)
+        plt.tick_params(axis='y',left='on',right='off',labelleft='on',labelright='off')
+        ax1.yaxis.set_label_position('left')
+        plt.ylabel('$i_0$')
+        plt.xlabel('$(g-i)_0$')
+        plt.ylim(25,15)
+        plt.xlim(-1,4)
+        plt.title('m-M = ' + '{:5.2f}'.format(dm) + ' (' + '{0:4.2f}'.format(mpc) +  ' Mpc)')
+        ax1.set_aspect(0.5)
+    
+        ax2 = plt.subplot(2,2,3)
+    
+        extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
+        plt.imshow(S, extent=extent, interpolation='nearest',cmap=cm.gray)
+        # plt.imshow(segm, extent=extent, cmap=rand_cmap, alpha=0.5)
+        cbar_S = plt.colorbar()
+        cbar_S.set_label('$\sigma$ from local mean')
+        # cbar_S.tick_params(labelsize=10)
+        plt.plot(x_circ,y_circ,linestyle='-', color='magenta')
+        plt.plot(x_circr,y_circr,linestyle='-', color='gold')
+        plt.plot(hi_x_circ,hi_y_circ,linestyle='-', color='limegreen')
+        # X, Y = np.meshgrid(xedges,yedges)
+        # ax3.pcolormesh(X,Y,grid_gaus)
+        plt.xlabel('RA (arcmin)')
+        plt.ylabel('Dec (arcmin)')
+        plt.title('smoothed stellar density')
+        # plt.ylabel('Dec (arcmin)')
+        plt.xlim(0,max(i_ra))
+        plt.ylim(0,max(i_dec))
+        ax2.set_aspect('equal')
+    
+        # ax3 = plt.subplot(2,2,4)
+        ax3 = plt.subplot2grid((2,4), (1,2))
+        plt.scatter(gmi_c, i_mag_c,  color='black', marker='o', s=3, edgecolors='none')
+        plt.scatter(gmi_fc, i_mag_fc,  color='red', marker='o', s=15, edgecolors='none')    
+        plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='off')
+        ax0.yaxis.set_label_position('left')
+        plt.title('detection')
+        plt.xlabel('$(g-i)_0$')
+        plt.ylabel('$i_0$')
+        plt.ylim(25,15)
+        plt.xlim(-1,4)
+        # ax3.set_aspect(0.5)    
+    
+        ax4 = plt.subplot2grid((2,4), (1,3), sharey=ax3)
+        plt.scatter(gmi_cr, i_mag_cr,  color='black', marker='o', s=3, edgecolors='none')
+        plt.scatter(gmi_fcr, i_mag_fcr,  color='red', marker='o', s=15, edgecolors='none')    
+        plt.tick_params(axis='y',left='on',right='on',labelleft='off',labelright='on')
+        plt.title('reference')
+        ax0.yaxis.set_label_position('left')
+        plt.xlabel('$(g-i)_0$')
+        plt.ylim(25,15)
+        plt.xlim(-1,4)
+        # ax3.set _aspect(0.5)
+        plt.tight_layout()
+        plt.savefig(out_file)
+        fig.clf()
+        
+        
+    pass
+
+if __name__ == '__main__':
+    main()

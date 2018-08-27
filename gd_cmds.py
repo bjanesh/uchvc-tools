@@ -62,7 +62,7 @@ def main():
         # print gmi_errAVG
         # print len(gx), "after color+mag error cut"
         # nid = np.loadtxt(mag_file,usecols=(0,),dtype=int,unpack=True)
-        pixcrd = zip(ix,iy)
+        pixcrd = list(zip(ix,iy))
         
         
         # print "Reading WCS info from image header..."
@@ -106,7 +106,7 @@ def main():
         cm_filter, gi_iso, i_m_iso = make_filter(dm, filter_file)
         stars_f = filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1)
         
-        xy_points = zip(i_ra,i_dec)
+        xy_points = list(zip(i_ra,i_dec))
         
         # make new vectors containing only the filtered points
         
