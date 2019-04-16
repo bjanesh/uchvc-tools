@@ -9,7 +9,7 @@ from astropy import wcs
 # import sewpy
 from astropy.io import fits
 from pyraf import iraf
-from escut_new import escut 
+from escut import escut 
 from rand_bkg import bkg_boxes
 from odi_calibrate import calibrate, js_calibrate, download_sdss
 

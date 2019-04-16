@@ -43,18 +43,20 @@ def main():
 
     # set up some filenames
     out_file = filter_string + '_' + fwhm_string + '_' + title_string + '.pdf'
-    mag_file = 'calibrated_mags.dat'
     mark_file = 'f_list_' + filter_string + '_' + fwhm_string + '_' + title_string + '.reg'
     circ_file = 'c_list_' + filter_string + '_' + fwhm_string + '_' + title_string + '.reg'
 
-
+    mag_file = "AGC249525_daophot.dat.cut"
+    idr,rar,decr,ixr,iyr,am_g,g_ir,g_ierrr,am_i,i_ir,i_ierrr,g_magr,i_magr,gmir,chi,sharp,ebv,gfwhmr,fwhm_sr = np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18),unpack=True)
+    gxr, gyr = ixr, iyr
     # read in magnitudes, colors, and positions(x,y)
-    gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
-    print len(gxr), "total stars"
+    # mag_file = 'calibrated_mags.dat'
+    # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
+    print(len(gxr), "total stars")
 
     # filter out the things with crappy color errors
-    color_error_cut = np.sqrt(2.0)*0.2
-    mag_error_cut = 0.2
+    mag_error_cut = 0.99
+    color_error_cut = np.sqrt(2.0)*mag_error_cut
 
     gmi_errr = [np.sqrt(g_ierrr[i]**2 + i_ierrr[i]**2) for i in range(len(gxr))]
     gx = [gxr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
@@ -69,7 +71,7 @@ def main():
     gmi_err = [np.sqrt(g_ierrr[i]**2 + i_ierrr[i]**2) for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
 
     # nid = np.loadtxt(mag_file,usecols=(0,),dtype=int,unpack=True)
-    pixcrd = zip(ix,iy)
+    pixcrd = list(zip(ix,iy))
 
 
     # print "Reading WCS info from image header..."
@@ -89,7 +91,7 @@ def main():
     world = w.all_pix2world(pixcrd, 1)
     ra_corner, dec_corner = w.all_pix2world(0,0,1)
     ra_c_d,dec_c_d = deg2HMS(ra=ra_corner, dec=dec_corner, round=True)
-    print 'Corner RA:',ra_c_d,':: Corner Dec:',dec_c_d
+    print('Corner RA:',ra_c_d,':: Corner Dec:',dec_c_d)
 
     # fwhm_i = fits_i[0].header['FWHMPSF']
     # fwhm_g = fits_g[0].header['FWHMPSF']
@@ -114,7 +116,7 @@ def main():
     # galaxyMap(fits_file_i, fwhm, -1.0, filter_file)
 
     grid, xedges, yedges = np.histogram2d(i_dec, i_ra, bins=[bins,bins], range=[[0,width],[0,width]])
-    hist_points = zip(xedges,yedges)
+    hist_points = list(zip(xedges,yedges))
 
     sig = ((bins/width)*fwhm)/2.355
     pltsig = fwhm/2.0
@@ -144,16 +146,16 @@ def main():
 
     # find the maximum point in the grid and center the circle there
     x_cent, y_cent = np.unravel_index(grid_gaus.argmax(),grid_gaus.shape)
-    print 'Max of gaussian convolved grid located at:','('+'{0:6.3f}'.format(yedges[y_cent])+','+'{0:6.3f}'.format(xedges[x_cent])+')'
+    print('Max of gaussian convolved grid located at:','('+'{0:6.3f}'.format(yedges[y_cent])+','+'{0:6.3f}'.format(xedges[x_cent])+')')
     # print grid_gaus[x_cent][y_cent]
-    print 'Value of S at above:','{0:6.3f}'.format(S[x_cent][y_cent])
+    print('Value of S at above:','{0:6.3f}'.format(S[x_cent][y_cent]))
 
     x_cent_S, y_cent_S = np.unravel_index(S.argmax(),S.shape)
-    print 'Max of S located at:','('+'{0:6.3f}'.format(yedges[y_cent_S])+','+'{0:6.3f}'.format(xedges[x_cent_S])+')'
+    print('Max of S located at:','('+'{0:6.3f}'.format(yedges[y_cent_S])+','+'{0:6.3f}'.format(xedges[x_cent_S])+')')
     # print grid_gaus[x_cent][y_cent]
-    print 'Value of S at above:','{0:6.3f}'.format(S[x_cent_S][y_cent_S])
+    print('Value of S at above:','{0:6.3f}'.format(S[x_cent_S][y_cent_S]))
 
-    print 'Number of bins above S_th: {0:4d}'.format(len(above_th))
+    print('Number of bins above S_th: {0:4d}'.format(len(above_th)))
 
     
     # make a circle to highlight a certain region
@@ -161,18 +163,18 @@ def main():
     sind = lambda x : np.sin(np.deg2rad(x))
     x_circ = [yedges[y_cent] + 3.0*cosd(t) for t in range(0,359,1)]
     y_circ = [xedges[x_cent] + 3.0*sind(t) for t in range(0,359,1)]
-    xy_points = zip(i_ra,i_dec)
-    verts_circ = zip(x_circ,y_circ)
+    xy_points = list(zip(i_ra,i_dec))
+    verts_circ = list(zip(x_circ,y_circ))
     circ_filter = Path(verts_circ)
     circ_c_x = ra_corner-(yedges[y_cent]/60.)
     circ_c_y = (xedges[x_cent]/60.)+dec_corner
     circ_pix_x, circ_pix_y = w.wcs_world2pix(circ_c_x,circ_c_y,1)
     ra_c, dec_c = w.all_pix2world(circ_pix_x, circ_pix_y,1)
     
-    ds9_file = 'circles_psmap_' + title_string + '.reg'
+    # ds9_file = 'circles_psmap_' + title_string + '.reg'
     
-    with open(ds9_file,'w+') as ds9:
-        print >> ds9, "fk5;circle({:f},{:f},2') # color=cyan width=2 label=psmap".format(ra_c, dec_c)
+    # with open(ds9_file,'w+') as ds9:
+    #     print >> ds9, "fk5;circle({:f},{:f},2') # color=cyan width=2 label=psmap".format(ra_c, dec_c)
 
     stars_circ = circ_filter.contains_points(xy_points)    
 
@@ -185,10 +187,10 @@ def main():
     i_x_c = [ix[i] for i in range(len(i_mag)) if (stars_circ[i])]
     i_y_c = [iy[i] for i in range(len(i_mag)) if (stars_circ[i])]
 
-    f2 = open(circ_file, 'w+')
-    for i in range(len(i_x_c)) :
-        print >> f2, '{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} '.format(i_x_c[i],i_y_c[i],i_rad_c[i],i_decd_c[i],i_mag_c[i],gmi_c[i])
-    f2.close()
+    # f2 = open(circ_file, 'w+')
+    # for i in range(len(i_x_c)) :
+    #     print >> f2, '{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} '.format(i_x_c[i],i_y_c[i],i_rad_c[i],i_decd_c[i],i_mag_c[i],gmi_c[i])
+    # f2.close()
 
     # print "{0:3d} stars in filter, {1:3d} stars in circle, {2:3d} stars in both.".format(len(i_mag_f),len(i_mag_c),len(i_mag_fc))
     # for i in range(len(i_x_fc)) :

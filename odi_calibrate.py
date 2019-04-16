@@ -1091,7 +1091,6 @@ def js_calibrate(img1 = None, img2 = None, podicut = 0.03, sdsscut = 0.03, verbo
     print('Calibration fit diagnostic plots:      ', img_root+'_photcal_js.pdf')
     print('Zero Point map:                        ', img_root+'_photmap_js.pdf')
     print('Final calibration values:              ', img_root+'_help_js.txt')
-
     
     return eps_g, std_eps_g, zp_g, std_zp_g, eps_i, std_eps_i, zp_i, std_zp_i
 

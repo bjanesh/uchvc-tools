@@ -5,8 +5,6 @@ import numpy as np
 from pyraf import iraf
 import glob
 
-#######################
-# <<<<<<< HEAD
 path = os.getcwd()
 subpath = path+'/compl'
 compl = 'compl/'

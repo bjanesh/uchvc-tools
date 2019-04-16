@@ -12,7 +12,7 @@ from astropy.io import fits
 import scipy.stats as ss
 from scipy import signal
 from odi_calibrate import query, filtercomment, usage, write_header
-from photutils import detect_sources, source_properties, properties_table
+from photutils import detect_sources, source_properties
 from photutils.utils import random_cmap
 try :
     from scipy import ndimage
@@ -375,14 +375,15 @@ def getHIcoincidence(x, y, object, ra_corner, dec_corner, height, width, dm):
     
     return grid_rot[x][y]    
     
-def dist2HIcentroid(ra, dec, ra_hi, dec_hi):
+def dist2HIcentroid(ra, dec, ra_hi, dec_hi, distance):
     from astropy import units as u
     from astropy.coordinates import SkyCoord
-    c_hi = SkyCoord(ra = ra_hi, dec = dec_hi, unit=(u.deg, u.deg))
-    c_peak = SkyCoord(ra = ra, dec = dec, unit=(u.hourangle, u.deg))
+    c_hi = SkyCoord(ra = ra_hi, dec = dec_hi, distance=distance*1000000., unit=(u.deg, u.deg, u.pc))
+    c_peak = SkyCoord(ra = ra, dec = dec, distance=distance*1000000., unit=(u.hourangle, u.deg, u.pc))
     sep = c_hi.separation(c_peak)
+    sep3d = c_hi.separation_3d(c_peak)
     # print c_hi, c_peak, sep.arcsecond
-    return sep.arcsecond
+    return sep.arcsecond, sep3d
 
 def deg2HMS(ra='', dec='', round=False):
     RA, DEC, rs, ds = '', '', '', ''
@@ -432,6 +433,13 @@ def make_filter(dm, filter_file):
         verts = list(zip(gi_iso,i_m_iso))        # set up the Path necessary for testing membership
         cm_filter = Path(verts)     # scale the filter to the DM: to find the apparent mag. just add the DM
     return cm_filter, gi_iso, i_m_iso
+
+def make_youngpop(dm, filter_file):
+    g_iso,i_iso = np.loadtxt(filter_file, usecols=(8,10),unpack=True)
+    gi_iso = g_iso - i_iso
+    i_m_iso = i_iso + dm
+    # scale the filter to the DM: to find the apparent mag. just add the DM
+    return gi_iso, i_m_iso
 
 def filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1, gal = False):
     if cm_filter == None:
@@ -506,7 +514,7 @@ def grid_smooth(i_ra_f, i_dec_f, fwhm, width, height):
         segm = detect_sources(S, 2.0, npixels=5)
         props = source_properties(S, segm)
         columns = ['id', 'maxval_xpos', 'maxval_ypos', 'max_value', 'area']
-        tbl = properties_table(props, columns=columns)
+        tbl = props.to_table(columns=columns)
     except ValueError:
         tbl = []
     # print tbl
@@ -636,16 +644,20 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
     title_string = fits_file_i.split('_')[0]       # get the name part of the filename.
 
     # set up some filenames
-    mag_file = 'calibrated_mags.dat'
+    # mag_file = 'calibrated_mags.dat'
+    mag_file = "AGC249525_daophot.dat.cut"
 
     # read in magnitudes, colors, and positions(x,y)
     # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
-    gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
+    # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
+    idr,rar,decr,ixr,iyr,am_g,g_ir,g_ierrr,am_i,i_ir,i_ierrr,g_magr,i_magr,gmir,chi,sharp,ebv,gfwhmr,fwhm_sr = np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18),unpack=True)
+    gxr, gyr = ixr, iyr
     # print len(gxr), "total stars"
-    fwhm_sr = np.ones_like(gxr)
+    # fwhm_sr = np.ones_like(gxr)
     # filter out the things with crappy color errors
-    color_error_cut = np.sqrt(2.0)*0.2
-    mag_error_cut = 0.2
+    mag_error_cut = 0.99
+    color_error_cut = np.sqrt(2.0)*mag_error_cut
+    
     
     gmi_errr = [np.sqrt(g_ierrr[i]**2 + i_ierrr[i]**2) for i in range(len(gxr))]
     gx = [gxr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))]
@@ -928,7 +940,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
         hi_c_ra, hi_c_dec = getHIellipse(title_string, ra_corner, dec_corner, centroid=True)        
         hi_pix_x,hi_pix_y = w.wcs_world2pix(hi_c_ra,hi_c_dec,1)
         
-        sep = dist2HIcentroid(ra_c_d, dec_c_d, hi_c_ra, hi_c_dec)
+        sep, sep3d = dist2HIcentroid(ra_c_d, dec_c_d, hi_c_ra, hi_c_dec, mpc)
         # print hi_pix_x, hi_pix_y
         # print ra_cr, dec_cr
         # print ra_c, dec_c
@@ -939,7 +951,7 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
 
         #iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
         #iraf.imutil.hedit(images=fits_i, fields='PV*', delete='yes', verify='no') 
-        if pct > 90.:
+        if pct > 97.:
             with open(ds9_file,'w+') as ds9:
                 print("fk5;circle({:f},{:f},2') # color=yellow width=2 label=ref".format(ra_cr, dec_cr), file=ds9)
                 print("fk5;circle({:f},{:f},2') # color=magenta width=2 label=detection".format(ra_c, dec_c), file=ds9)

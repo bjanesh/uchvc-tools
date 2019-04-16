@@ -7,18 +7,20 @@ from astropy import wcs
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.cm as cm
+from matplotlib.path import Path
 import scipy.stats as ss
 from collections import OrderedDict
-from magfilter import deg2HMS, grid_smooth, getHIellipse, make_filter, filter_sources
+from magfilter import deg2HMS, grid_smooth, getHIellipse, dist2HIcentroid, make_filter, make_youngpop, filter_sources
 
 def main():
     # objects = ['AGC174540', 'AGC226067', 'AGC227987', 'AGC229326', 'AGC238713', 'AGC249282', 'AGC249323', 'AGC258242', 'AGC258459', 'AGC268074', 'HI1037+21', 'HI1050+23']
     
-    # objects = OrderedDict([('AGC174540',25.28), ('AGC198511',26.75), ('HI1037+21',23.59), ('AGC226067',24.72), ('AGC227987',24.57), ('AGC229326',22.03), ('AGC238626',23.25)])
-    objects = OrderedDict([('AGC238713',26.20), ('AGC249000',26.40), ('AGC249282',24.01), ('AGC249323',26.40), ('AGC258237',26.90), ('AGC258459',25.63), ('HI1050+23',22.17)])
-    # smooths = OrderedDict([('AGC174540',2.0), ('AGC198511',2.0), ('HI1037+21',2.0), ('AGC226067',2.0), ('AGC227987',3.0), ('AGC229326',2.0), ('AGC238626',3.0)])
-    smooths = OrderedDict([('AGC238713',3.0), ('AGC249000',3.0), ('AGC249282',2.0), ('AGC249323',2.0), ('AGC258237',2.0), ('AGC258459',2.0), ('HI1050+23',3.0)])
+    objects = OrderedDict([('AGC174540',25.28), ('AGC198511',26.75), ('HI1037+21',23.59), ('HI1050+23',22.17), ('AGC226067',24.72), ('AGC227987',24.57), ('AGC229326',22.03), ('AGC238626',23.25)])
+    # objects = OrderedDict([('AGC238713',26.20), ('AGC249000',26.40), ('AGC249282',24.01), ('AGC249323',26.40), ('AGC258237',26.90), ('AGC258459',25.63)])
+    smooths = OrderedDict([('AGC174540',2.0), ('AGC198511',2.0), ('HI1037+21',2.0), ('HI1050+23',3.0), ('AGC226067',2.0), ('AGC227987',3.0), ('AGC229326',2.0), ('AGC238626',3.0)])
+    # smooths = OrderedDict([('AGC238713',3.0), ('AGC249000',3.0), ('AGC249282',2.0), ('AGC249323',2.0), ('AGC258237',2.0), ('AGC258459',2.0)])
     filter_file = os.path.dirname(os.path.abspath(__file__))+'/filter.txt'
+    young_file = os.path.dirname(os.path.abspath(__file__))+'/filter_young.txt'
     
     # plt.clf()
     fig = plt.figure(figsize=(8,8))
@@ -26,7 +28,7 @@ def main():
     for i, obj in enumerate(objects.keys()):
         inner = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[i], wspace=0.1, hspace=0.1)
         # set up some filenames
-        folder = '/Volumes/galileo/uchvc/targets/'+obj.lower()+'/'
+        folder = '/data/uchvc/targets/'+obj.lower()+'/'
         mag_file = folder+'calibrated_mags.dat'
         fits_file_i = folder+obj+'_i.fits'                  
         fits_i = fits.open(fits_file_i)
@@ -67,7 +69,7 @@ def main():
         # print gmi_errAVG
         # print len(gx), "after color+mag error cut"
         # nid = np.loadtxt(mag_file,usecols=(0,),dtype=int,unpack=True)
-        pixcrd = zip(ix,iy)
+        pixcrd = list(zip(ix,iy))
         
         
         # print "Reading WCS info from image header..."
@@ -109,9 +111,10 @@ def main():
         i_decd = [world[i,1] for i in range(len(world[:,1]))]
         
         cm_filter, gi_iso, i_m_iso = make_filter(dm, filter_file)
+        gi_young, i_m_young = make_youngpop(dm, young_file)
         stars_f = filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1)
         
-        xy_points = zip(i_ra,i_dec)
+        xy_points = list(zip(i_ra,i_dec))
         
         # make new vectors containing only the filtered points
         
@@ -162,6 +165,7 @@ def main():
         #     ax1.plot(gmiCompl,iCompl, linestyle='--', color='blue')
         
         ax1.plot(gi_iso,i_m_iso,linestyle='-', color='blue')
+        ax1.plot(gi_young,i_m_young,linestyle='--', lw=0.5, color='blue')
         ax1.scatter(gmi, i_mag,  color='black', marker='o', s=1, edgecolors='none')
         ax1.scatter(gmi_f, i_mag_f,  color='red', marker='o', s=15, edgecolors='none')
         ax1.errorbar(bxvals, bcenters, xerr=i_ierrAVG, yerr=gmi_errAVG, linestyle='None', color='black', capsize=0, ms=0)
@@ -192,6 +196,8 @@ def main():
         ax2.set_ylabel('Dec (arcmin)')
         if obj.startswith('HI1037'):
             ax2.set_title('AGC208747', size='small')
+        elif obj.startswith('HI1050'):
+            ax2.set_title('AGC208753', size='small')
         else:
             ax2.set_title(obj, size='small')
         ax2.set_xlim(0,max(i_ra))
