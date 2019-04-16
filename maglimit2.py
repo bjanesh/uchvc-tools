@@ -17,8 +17,8 @@ iraf.imutil(_doprint=0)
 
 def getHImass(object, dm):
     # print object, mpc
-    uchvcdb = os.environ['HOME']+'/projects/uchvc-db/uchvc_hi_properties.txt'
-    name, mass = np.loadtxt(uchvcdb, usecols=(1,6), dtype=str, unpack=True)
+    uchvcdb = os.path.dirname(os.path.abspath(__file__))+'/predblist.sort.csv'
+    name, mass = np.loadtxt(uchvcdb, usecols=(1,6), dtype=str, delimiter=',', unpack=True)
     # find the right row
     coord = [i for i,this in enumerate(mass) if object.upper() in name[i]][0]
     # print 'the HI mass of', name[coord], 'is', mass[coord], 'at 1 Mpc'
@@ -316,8 +316,8 @@ def main():
     i_sun = 4.58
     m_hi = getHImass(title_string, dm)
 
-    v_magr, g_magr, i_magr = np.loadtxt('/Users/wjanesh/projects/uchvc-tools/sdssBVR.dat', usecols=(4, 12, 16), unpack=True)
-    good_g, good_i = np.loadtxt('/Users/wjanesh/projects/uchvc-tools/sdssBVR.dat', usecols=(21,23), dtype=bool, unpack=True)
+    v_magr, g_magr, i_magr = np.loadtxt(os.path.dirname(os.path.abspath(__file__))+'/sdssBVR.dat', usecols=(4, 12, 16), unpack=True)
+    good_g, good_i = np.loadtxt(os.path.dirname(os.path.abspath(__file__))+'sdssBVR.dat', usecols=(21,23), dtype=bool, unpack=True)
 
     good = np.where((v_magr-g_magr < 0.5) & (v_magr-g_magr > -1.5) & good_g & good_i)
     print good[0].size, v_magr.size
