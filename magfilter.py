@@ -644,18 +644,18 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
     title_string = fits_file_i.split('_')[0]       # get the name part of the filename.
 
     # set up some filenames
-    # mag_file = 'calibrated_mags.dat'
-    mag_file = "AGC249525_daophot.dat.cut"
+    mag_file = 'calibrated_mags.dat'
+    # mag_file = "AGC249525_daophot.dat.cut"
 
     # read in magnitudes, colors, and positions(x,y)
-    # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
+    gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir,fwhm_sr= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,11),unpack=True)
     # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
-    idr,rar,decr,ixr,iyr,am_g,g_ir,g_ierrr,am_i,i_ir,i_ierrr,g_magr,i_magr,gmir,chi,sharp,ebv,gfwhmr,fwhm_sr = np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18),unpack=True)
+    # idr,rar,decr,ixr,iyr,am_g,g_ir,g_ierrr,am_i,i_ir,i_ierrr,g_magr,i_magr,gmir,chi,sharp,ebv,gfwhmr,fwhm_sr = np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18),unpack=True)
     gxr, gyr = ixr, iyr
     # print len(gxr), "total stars"
     # fwhm_sr = np.ones_like(gxr)
     # filter out the things with crappy color errors
-    mag_error_cut = 0.99
+    mag_error_cut = 0.2
     color_error_cut = np.sqrt(2.0)*mag_error_cut
     
     
@@ -899,8 +899,8 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
             i_x_fc = [ix[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
             i_y_fc = [iy[i] for i in range(len(i_mag)) if (stars_circ[i] and stars_f[i])]
 
-            fcirc_file = 'circle'+repr(r)+'.txt'
-            with open(fcirc_file,'w+') as f3:
+            stfcirc_file = 'circle'+repr(r)+'.txt'
+            with open(stfcirc_file,'w+') as f3:
                 for i,x in enumerate(i_x_fc):
                     print(i_x_fc[i], i_y_fc[i], file=f3)
         
@@ -972,12 +972,14 @@ def magfilter(fwhm, fwhm_string, dm, dm_string, filter_file, filter_string, dm2=
                 print('{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f} {7:7.3f}'.format(i_x_c[i],i_y_c[i],i_rad_c[i],i_decd_c[i],i_mag_c[i],i_mag_c[i]+gmi_c[i],gmi_c[i],fwhm_sc[i]), file=f2)
             f2.close()
             
-            with open(fcirc_file,'w+') as f3:
-                for i,x in enumerate(i_x_fc):
-                    print(i_x_fc[i], i_y_fc[i], fwhm_sfc[i], file=f3)
-                    
-            with open(circles_file,'w+') as f4:
-                print(circ_pix_x, circ_pix_y, file=f4)
+            f3 = open(fcirc_file,'w+')
+            for i,x in enumerate(i_x_fc):
+                print('{0:8.2f} {1:8.2f} {2:12.8f} {3:12.8f} {4:8.2f} {5:8.2f} {6:8.2f} {7:7.3f}'.format(i_x_fc[i],i_y_fc[i],i_rad_fc[i],i_decd_fc[i],i_mag_fc[i],i_mag_fc[i]+gmi_fc[i],gmi_fc[i],fwhm_sfc[i]), file=f3)
+            f3.close()        
+
+            f4 = open(circles_file,'w+')
+            print(circ_pix_x, circ_pix_y, file=f4)
+            f4.close()
             
             # center_file = 'im_cens_'+dm_string+'_'+fwhm_string+'.dat'
             # im_cens = open(center_file,'w+')
