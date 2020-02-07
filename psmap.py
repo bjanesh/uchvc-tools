@@ -1,4 +1,3 @@
-#! /usr/local/bin/python
 import os, sys, getopt, warnings
 import numpy as np
 import matplotlib.pyplot as plt
@@ -52,7 +51,7 @@ def main():
     # read in magnitudes, colors, and positions(x,y)
     # mag_file = 'calibrated_mags.dat'
     # gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
-    print(len(gxr), "total stars")
+    print((len(gxr), "total stars"))
 
     # filter out the things with crappy color errors
     mag_error_cut = 0.99
@@ -91,7 +90,7 @@ def main():
     world = w.all_pix2world(pixcrd, 1)
     ra_corner, dec_corner = w.all_pix2world(0,0,1)
     ra_c_d,dec_c_d = deg2HMS(ra=ra_corner, dec=dec_corner, round=True)
-    print('Corner RA:',ra_c_d,':: Corner Dec:',dec_c_d)
+    print(('Corner RA:',ra_c_d,':: Corner Dec:',dec_c_d))
 
     # fwhm_i = fits_i[0].header['FWHMPSF']
     # fwhm_g = fits_g[0].header['FWHMPSF']
@@ -146,16 +145,16 @@ def main():
 
     # find the maximum point in the grid and center the circle there
     x_cent, y_cent = np.unravel_index(grid_gaus.argmax(),grid_gaus.shape)
-    print('Max of gaussian convolved grid located at:','('+'{0:6.3f}'.format(yedges[y_cent])+','+'{0:6.3f}'.format(xedges[x_cent])+')')
+    print(('Max of gaussian convolved grid located at:','('+'{0:6.3f}'.format(yedges[y_cent])+','+'{0:6.3f}'.format(xedges[x_cent])+')'))
     # print grid_gaus[x_cent][y_cent]
-    print('Value of S at above:','{0:6.3f}'.format(S[x_cent][y_cent]))
+    print(('Value of S at above:','{0:6.3f}'.format(S[x_cent][y_cent])))
 
     x_cent_S, y_cent_S = np.unravel_index(S.argmax(),S.shape)
-    print('Max of S located at:','('+'{0:6.3f}'.format(yedges[y_cent_S])+','+'{0:6.3f}'.format(xedges[x_cent_S])+')')
+    print(('Max of S located at:','('+'{0:6.3f}'.format(yedges[y_cent_S])+','+'{0:6.3f}'.format(xedges[x_cent_S])+')'))
     # print grid_gaus[x_cent][y_cent]
-    print('Value of S at above:','{0:6.3f}'.format(S[x_cent_S][y_cent_S]))
+    print(('Value of S at above:','{0:6.3f}'.format(S[x_cent_S][y_cent_S])))
 
-    print('Number of bins above S_th: {0:4d}'.format(len(above_th)))
+    print(('Number of bins above S_th: {0:4d}'.format(len(above_th))))
 
     
     # make a circle to highlight a certain region

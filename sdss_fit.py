@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -55,4 +54,4 @@ def getVabs(g_mag, i_mag, dm):
 if __name__ == '__main__':
     # test values (g, i, dm)
     vabs = getVabs(16.5, 15.5, 23.5)
-    print vabs
+    print(vabs)

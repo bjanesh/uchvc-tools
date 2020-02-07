@@ -1,4 +1,3 @@
-#! /usr/local/bin/python
 import os, sys, time, glob
 import numpy as np
 import matplotlib.pyplot as plt
@@ -48,7 +47,7 @@ def getfwhm(image, coords, outputfile, radius=4.0, buff=7.0, width=5.0, rplot=15
     # hdulist = ast.io.fits.open(image)
     # seeing = hdulist[0].header['FWHMSTAR']
     # gfwhm = seeing/0.11
-    print 'median gwfhm in ',image+': ',np.median(gfwhm),'pixels'# (determined via QR)'
+    print('median gwfhm in ',image+': ',np.median(gfwhm),'pixels')# (determined via QR)'
     return np.median(gfwhm)
 
 home_root = os.environ['HOME']
@@ -108,7 +107,7 @@ fits_i = title_string+'_i.fits'
 # make an imsets file
 if not os.path.isfile(title_string+'.imsets') :
     imset_file = open(title_string+'.imsets', 'w+')
-    print >> imset_file, title_string, ':', fits_i, fits_g
+    print(title_string, ':', fits_i, fits_g, file=imset_file)
     imset_file.close()
 
 # call('ds9x11 &')
@@ -142,7 +141,7 @@ amg = float(photcalLines[25].split()[5])
 ami = float(photcalLines[26].split()[5])
 photcalFile.close()
 
-print mu_gi, zp_gi, eps_gi, zp_i, amg, ami
+print(mu_gi, zp_gi, eps_gi, zp_i, amg, ami)
 
 # delete the pipeline WCS keywords from the header, Steven's are better
 iraf.imutil.hedit(images=fits_g, fields='PV*', delete='yes', verify='no')
@@ -166,8 +165,8 @@ except:
     xdim = fits_h_i[0].header['NAXIS1']
     ydim = fits_h_i[0].header['NAXIS2']
 
-print 'Target Coordinates :: ',fits_h_i[0].header['RA'],fits_h_i[0].header['DEC']
-print 'Image header FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i)
+print('Target Coordinates :: ',fits_h_i[0].header['RA'],fits_h_i[0].header['DEC'])
+print('Image header FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(fwhm_g,fwhm_i))
 
 # background sigma calculation
 # put down boxes to measure it. QR should give a reasonable estimate as well, maybe use that? (simpler)
@@ -210,8 +209,8 @@ bgm_i, bg_i, cen = bkg_boxes(fits_i, 1000, 10.0, sources=True)
 # bg_i = np.mean(bgsig_i)
 # bgm_g = np.mean(bgmean_g)
 # bgm_i = np.mean(bgmean_i)
-print 'Image mean BG sigma value :: g = {0:5.3f} : i = {1:5.3f}'.format(bg_g,bg_i)
-print 'Image mean BG median value :: g = {0:5.3f} : i = {1:5.3f}'.format(bgm_g,bgm_i)
+print('Image mean BG sigma value :: g = {0:5.3f} : i = {1:5.3f}'.format(bg_g,bg_i))
+print('Image mean BG median value :: g = {0:5.3f} : i = {1:5.3f}'.format(bgm_g,bgm_i))
 
 # daofind steps
 # find all the sources in the image (threshold value will be data dependent, 4.0 is good for UCHVCs)
@@ -268,7 +267,7 @@ if not os.path.isfile(fits_i+'.coo.1') :
 
 # now phot the stars found in daofind
 if not os.path.isfile(fits_g+'.mag.1') :
-    print 'phot-ing g band daofind stars. This is going to take a while...'
+    print('phot-ing g band daofind stars. This is going to take a while...')
     iraf.unlearn(iraf.apphot.phot,iraf.datapars,iraf.photpars,iraf.centerpars,iraf.fitskypars)
     iraf.apphot.phot.setParam('interactive',"no")
     iraf.apphot.phot.setParam('verify',"no")
@@ -293,7 +292,7 @@ if not os.path.isfile(fits_g+'.mag.1') :
     iraf.apphot.phot(image=fits_g, coords=fits_g+'.coo.1')
 
 if not os.path.isfile(fits_i+'.mag.1') :
-    print 'phot-ing i band daofind stars. This is going to take a while...'
+    print('phot-ing i band daofind stars. This is going to take a while...')
     iraf.unlearn(iraf.phot,iraf.datapars,iraf.photpars,iraf.centerpars,iraf.fitskypars)
     iraf.apphot.phot.setParam('interactive',"no")
     iraf.apphot.phot.setParam('verify',"no")
@@ -318,9 +317,9 @@ if not os.path.isfile(fits_i+'.mag.1') :
 
 # get rid of regions you don't want using pselect    
 if not os.path.isfile('mask.reg'):
-    print 'To continue you should mask out bright stars, galaxies, etc.'
-    print 'in DS9 and export to an IRAF PROS file named mask.reg'
-    raw_input("Press Enter when finished:")
+    print('To continue you should mask out bright stars, galaxies, etc.')
+    print('in DS9 and export to an IRAF PROS file named mask.reg')
+    input("Press Enter when finished:")
 
 
 m3,m4,m5,m6 = np.loadtxt('mask.reg',usecols=(2,3,4,5),unpack=True)
@@ -391,9 +390,9 @@ if len(glob.glob('tol*.pos')) < 2:
         match_pos_file_i = open("tol7_i.pos", 'w+')
         for i in range(len(mx)) :
             if mfilter[i]== 'odi_g' :
-                print >> match_pos_file_g, mx[i], my[i]
+                print(mx[i], my[i], file=match_pos_file_g)
             if mfilter[i] == 'odi_i' :
-                print >> match_pos_file_i, mx[i], my[i]
+                print(mx[i], my[i], file=match_pos_file_i)
         match_pos_file_g.close()
         match_pos_file_i.close()
     
@@ -459,18 +458,18 @@ if not os.path.isfile('apcor.tbl.txt'):
     
         ap_std_g = np.std([ap_cand_g[i][2] for i in range(len(ap_cand_g))])
         ap_std_i = np.std([ap_cand_i[i][2] for i in range(len(ap_cand_i))])
-        print 'Measured image FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(ap_avg_g,ap_avg_i)
+        print('Measured image FWHM :: g = {0:5.3f} : i = {1:5.3f}'.format(ap_avg_g,ap_avg_i))
     
         if not os.path.isfile('apcor_stars_g.txt'):
             ap_file_g = open('apcor_stars_g.txt','w+')
             for i in range(len(ap_stars_g)) :
-                print >> ap_file_g, ap_stars_g[i][0], ap_stars_g[i][1], ap_stars_g[i][2], ap_stars_g[i][3]
+                print(ap_stars_g[i][0], ap_stars_g[i][1], ap_stars_g[i][2], ap_stars_g[i][3], file=ap_file_g)
             ap_file_g.close()
         
         if not os.path.isfile('apcor_stars_i.txt'):
             ap_file_i = open('apcor_stars_i.txt','w+')
             for i in range(len(ap_stars_i)) :
-                print >> ap_file_i, ap_stars_i[i][0], ap_stars_i[i][1], ap_stars_i[i][2], ap_stars_i[i][3]
+                print(ap_stars_i[i][0], ap_stars_i[i][1], ap_stars_i[i][2], ap_stars_i[i][3], file=ap_file_i)
             ap_file_i.close()
     
         # iraf.unlearn(iraf.tv.tvmark)
@@ -540,19 +539,19 @@ if not os.path.isfile('apcor.tbl.txt'):
         apcor_std_i = np.std(apcor_ind_i)
         apcor_sem_i = apcor_std_i/np.sqrt(len(apcor_ind_i))
     
-        print 'Aperture correction :: g = {0:7.4f} : i = {1:7.4f}'.format(apcor_g,apcor_i)
-        print 'Aperture corr. StD. :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_std_g,apcor_std_i)
-        print 'Aperture corr. SEM  :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_sem_g,apcor_sem_i)
-        print 'Aperture corr. N    :: g = {0:2d} : i = {1:2d}'.format(len(onex_g),len(onex_i))
+        print('Aperture correction :: g = {0:7.4f} : i = {1:7.4f}'.format(apcor_g,apcor_i))
+        print('Aperture corr. StD. :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_std_g,apcor_std_i))
+        print('Aperture corr. SEM  :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_sem_g,apcor_sem_i))
+        print('Aperture corr. N    :: g = {0:2d} : i = {1:2d}'.format(len(onex_g),len(onex_i)))
     
         apcor_tbl = open('apcor.tbl.txt','w+')
-        print >> apcor_tbl, apcor_g, apcor_std_g, apcor_sem_g
-        print >> apcor_tbl, apcor_i, apcor_std_i, apcor_sem_i
+        print(apcor_g, apcor_std_g, apcor_sem_g, file=apcor_tbl)
+        print(apcor_i, apcor_std_i, apcor_sem_i, file=apcor_tbl)
         apcor_tbl.close()
     else :
         apcor_g = 0.0
         apcor_i = 0.0
-        print 'Seeing is pretty bad, no aperture correction applied.'
+        print('Seeing is pretty bad, no aperture correction applied.')
 else :
     apcor, apcor_std, apcor_sem = np.loadtxt('apcor.tbl.txt', usecols=(0,1,2), unpack=True)
     apcor_g = apcor[0]
@@ -561,9 +560,9 @@ else :
     apcor_std_i = apcor_std[1]
     apcor_sem_g = apcor_sem[0]
     apcor_sem_i = apcor_sem[1]
-    print 'Aperture correction :: g = {0:7.4f} : i = {1:7.4f}'.format(apcor_g,apcor_i)
-    print 'Aperture corr. StD. :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_std_g,apcor_std_i)
-    print 'Aperture corr. SEM  :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_sem_g,apcor_sem_i)
+    print('Aperture correction :: g = {0:7.4f} : i = {1:7.4f}'.format(apcor_g,apcor_i))
+    print('Aperture corr. StD. :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_std_g,apcor_std_i))
+    print('Aperture corr. SEM  :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_sem_g,apcor_sem_i))
 
     ap_gx,ap_gy = np.loadtxt('getfwhm_g.log',usecols=(0,1),unpack=True)
     ap_mag_g = np.loadtxt('getfwhm_g.log',usecols=(5,),dtype=str,unpack=True)
@@ -571,7 +570,7 @@ else :
     ap_fwhm_g = np.loadtxt('getfwhm_g.log',usecols=(12,),dtype=str,unpack=True)
     good = np.where(ap_fwhm_g!='INDEF')
     fwhm_good = ap_fwhm_g[good].astype(float)
-    print good
+    print(good)
     ap_avg_g = np.median(fwhm_good)
 
     ap_ix,ap_iy = np.loadtxt('getfwhm_i.log',usecols=(0,1),unpack=True)
@@ -619,7 +618,7 @@ if os.path.isfile('escut_g.pos') :
     # Using a sky annulus thatbegins at 6 x <fwhm> should be fine
     # g-band
     if not os.path.isfile(title_string+'_sources_g.mag.1') :
-        print 'Phot-ing g band point sources, this could take a while.'
+        print('Phot-ing g band point sources, this could take a while.')
         iraf.datapars.setParam('fwhmpsf',ap_avg_g)
         iraf.photpars.setParam('apertures',ap_avg_g)
         iraf.fitskypars.setParam('annulus',6*ap_avg_g)
@@ -628,7 +627,7 @@ if os.path.isfile('escut_g.pos') :
 # i-band    
 if os.path.isfile('escut_i.pos') :
     if not os.path.isfile(title_string+'_sources_i.mag.1') :
-        print 'Phot-ing i band point sources, this could take a while.'
+        print('Phot-ing i band point sources, this could take a while.')
         iraf.datapars.setParam('fwhmpsf',ap_avg_i)
         iraf.photpars.setParam('apertures',ap_avg_i)
         iraf.fitskypars.setParam('annulus',6*ap_avg_i)
@@ -639,7 +638,7 @@ def getexttbl(ra,dec,fname='extinction.tbl.txt'):
     '''Takes RA and Dec in colon separated sexagesimal format and queries 
         http://irsa.ipac.caltech.edu/ for the extinction table at that location
         File is saved as extinction.tbl.txt or as specified by user in optional 3rd arg'''
-    import urllib2
+    import urllib.request, urllib.error, urllib.parse
     from bs4 import BeautifulSoup
     # parse the ra and dec
     ravals = ra.split(':')
@@ -650,21 +649,21 @@ def getexttbl(ra,dec,fname='extinction.tbl.txt'):
 
     # set the url to go get the extinction table
     exturl = "http://irsa.ipac.caltech.edu/cgi-bin/DUST/nph-dust?locstr="+ra_str+'+'+dec_str+'+equ+j2000' 
-    print '-> from', exturl
+    print('-> from', exturl)
 
-    xmlget = urllib2.urlopen(exturl)
+    xmlget = urllib.request.urlopen(exturl)
     soup = BeautifulSoup(xmlget,"lxml-xml")
     # print soup.prettify()
 
     tblurl = soup.result.data.table.string
-    exttbl = urllib2.urlopen(tblurl)
+    exttbl = urllib.request.urlopen(tblurl)
 
     f = open(fname,'w+')
-    print >> f, exttbl.read()
+    print(exttbl.read(), file=f)
     f.close()
 
 if not os.path.isfile('extinction.tbl.txt'):
-    print 'Fetching extinction table for',fits_h_i[0].header['RA'],fits_h_i[0].header['DEC']
+    print('Fetching extinction table for',fits_h_i[0].header['RA'],fits_h_i[0].header['DEC'])
     getexttbl(fits_h_i[0].header['RA'],fits_h_i[0].header['DEC'])
 
 LamEff,A_over_E_B_V_SandF,A_SandF,A_over_E_B_V_SFD,A_SFD= np.genfromtxt('extinction.tbl.txt', usecols=(2,3,4,5,6),unpack=True,skip_header=27,skip_footer=12)
@@ -678,7 +677,7 @@ for j in range(len(A_id)):                                  # use 0.86*E(B-V) in
     if A_id[j] == 'i':
         cal_A_i = A_over_E_B_V_SandF[j]*0.86*E_B_V
         
-print 'Reddening correction :: g = {0:7.4f} : i = {1:7.4f}'.format(cal_A_g,cal_A_i)
+print('Reddening correction :: g = {0:7.4f} : i = {1:7.4f}'.format(cal_A_g,cal_A_i))
 
 # f_zp_g = open(title_string+'_g_phot.zp')
 # data_g = f_zp_g.read()
@@ -773,8 +772,8 @@ gmi = g_mag - i_mag
 # i_mag = i_mag - cal_A_i
 # gmi = g_mag - i_mag
 
-print 'Median (g-i) :: g - i = {0:7.4f}'.format(np.median(gmi))
-print 'Final number of phot-ed stars :: g = {0:5d} : i = {1:5d}'.format(len(g_mag),len(i_mag))
+print('Median (g-i) :: g - i = {0:7.4f}'.format(np.median(gmi)))
+print('Final number of phot-ed stars :: g = {0:5d} : i = {1:5d}'.format(len(g_mag),len(i_mag)))
 
 g_mag_lims = [g_mag[i] for i in range(len(g_mag)) if (g_ierr[i] >= 0.2)]
 i_mag_lims = [i_mag[i] for i in range(len(i_mag)) if (i_ierr[i] >= 0.2)]
@@ -782,7 +781,7 @@ i_mag_lims = [i_mag[i] for i in range(len(i_mag)) if (i_ierr[i] >= 0.2)]
 # print '5-sigma limit :: g = {0:7.4f} : i = {1:7.4f}'.format(min(g_mag_lims), min(i_mag_lims))
 
 # add the ra and dec to the catalog too
-pixcrd = zip(ix,iy)
+pixcrd = list(zip(ix,iy))
 # Parse the WCS keywords in the primary HDU
 w = wcs.WCS(fits_h_i[0].header)
 
@@ -790,10 +789,10 @@ w = wcs.WCS(fits_h_i[0].header)
 # The second argument is "origin" -- in this case we're declaring we
 # have 1-based (Fortran-like) coordinates.
 world = w.all_pix2world(pixcrd, 1)
-print len(ix), len(escut_i)
+print(len(ix), len(escut_i))
 f3 = open('calibrated_mags.dat', 'w+')
 for i in range(len(ix)) :
-    print >> f3, '{0:8.2f} {1:8.2f} {2:12.3f} {3:12.3f} {4:8.2f} {5:8.2f} {6:12.3f} {7:12.3f} {8:12.3f} {9:12.8f} {10:12.8f} {11:7.3f}'.format(gx[i],gy[i],g_mag[i],g_ierr[i],ix[i],iy[i],i_mag[i],i_ierr[i],gmi[i], world[i,0],world[i,1],escut_i[i])
+    print('{0:8.2f} {1:8.2f} {2:12.3f} {3:12.3f} {4:8.2f} {5:8.2f} {6:12.3f} {7:12.3f} {8:12.3f} {9:12.8f} {10:12.8f} {11:7.3f}'.format(gx[i],gy[i],g_mag[i],g_ierr[i],ix[i],iy[i],i_mag[i],i_ierr[i],gmi[i], world[i,0],world[i,1],escut_i[i]), file=f3)
 f3.close()
 
 plt.clf()

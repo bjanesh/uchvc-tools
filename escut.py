@@ -1,4 +1,3 @@
-#! /usr/local/bin/python
 def escut(image, pos_file, fwhm, peak):
     # input image file name, file name with matched source positions, **np.array of fwhm measurements for each source
     import numpy as np
@@ -110,9 +109,9 @@ def escut(image, pos_file, fwhm, peak):
     fwhmCut = fwhm#_good
     peakCut = peak
     
-    print peakCut.size, magCut.size, diffCut.size
+    print(peakCut.size, magCut.size, diffCut.size)
     
-    print diffCut.size, 0, np.median(diffCut), diffCut.std()
+    print(diffCut.size, 0, np.median(diffCut), diffCut.std())
     nRemoved = 1   
     
     # plt.clf()
@@ -123,7 +122,7 @@ def escut(image, pos_file, fwhm, peak):
     # plt.hlines(bin_edges, -2, 1, colors='red', linestyle='dashed')
     plt.scatter(diff, mag2x, edgecolor='none', facecolor='black', s=4)
     # plt.scatter(diffCut, magCut, edgecolor='none', facecolor='blue', s=4)
-    magdiff = zip(magCut.tolist(), diffCut.tolist(), peakCut.tolist(), idCut.tolist())
+    magdiff = list(zip(magCut.tolist(), diffCut.tolist(), peakCut.tolist(), idCut.tolist()))
     dtype = [('mag',float), ('diff', float), ('peak', float), ('id', int)]
     magdiff = np.array(magdiff, dtype=dtype)
     
@@ -132,7 +131,7 @@ def escut(image, pos_file, fwhm, peak):
     peakRange = (magSort['peak'] > 20000.0) & (magSort['peak'] < 40000.0)
     peakVal = np.median((magSort['diff'])[np.where(peakRange)])
     # peakVal = np.median(diffCut)
-    print peakVal
+    print(peakVal)
     
     plt.scatter((magSort['diff'])[np.where(peakRange)], (magSort['mag'])[np.where(peakRange)], edgecolor='none', facecolor='blue', s=4)
     
@@ -148,7 +147,7 @@ def escut(image, pos_file, fwhm, peak):
         yCut = yCut[diffCheck]
         idCut = idCut[diffCheck]
         fwhmCut = fwhmCut[diffCheck]
-        print diffCut.size, nRemoved, np.median(diffCut), diffCut.std()
+        print(diffCut.size, nRemoved, np.median(diffCut), diffCut.std())
         if 0.05 < diffCut.std() <0.06:
            nRemoved=0 
         # plt.fill_betweenx(bin_centers, bin_meds+3.0*bin_stds, bin_meds-3.0*bin_stds, facecolor='red', edgecolor='none', alpha=0.4, label='2x RMS sigma clipping region')
@@ -173,8 +172,8 @@ def escut(image, pos_file, fwhm, peak):
     # for i,bin_hwi in enumerate(bin_hw):
         
     
-    left_edge = np.array(zip(peakVal-bin_hw, bin_centers))
-    right_edge = np.flipud(np.array(zip(peakVal+bin_hw, bin_centers)))
+    left_edge = np.array(list(zip(peakVal-bin_hw, bin_centers)))
+    right_edge = np.flipud(np.array(list(zip(peakVal+bin_hw, bin_centers))))
     # print left_edge, right_edge
     verts = np.vstack((left_edge, right_edge))
     # print verts
@@ -183,12 +182,12 @@ def escut(image, pos_file, fwhm, peak):
     # DON'T USE A PATH BECAUSE APPARENTLY IT CAN SELECT THE INVERSE SET!! WTF
     # print verts
     esRegion = Path(verts)
-    sources = esRegion.contains_points(zip(diff,mag2x))
+    sources = esRegion.contains_points(list(zip(diff,mag2x)))
     # print sources
     
     with open('escutREG_i.pos','w+') as f:
         for i,blah in enumerate(xpos[sources]):
-            print >> f, (xpos[sources])[i], (ypos[sources])[i], (diff[sources])[i]
+            print((xpos[sources])[i], (ypos[sources])[i], (diff[sources])[i], file=f)
     
     magCut2 = mag2x[sources]
     magCut1 = mag1x[sources]
@@ -208,7 +207,7 @@ def escut(image, pos_file, fwhm, peak):
             
     # fwhmcheck = np.loadtxt('testfwhmREG.log', usecols=(10,), unpack=True)
     fwhmchk2 = np.where((magCut2<-4) & (fwhmCut<90.0))
-    print np.median(fwhmCut[fwhmchk2]), np.std(fwhmCut[fwhmchk2])
+    print(np.median(fwhmCut[fwhmchk2]), np.std(fwhmCut[fwhmchk2]))
     fwchk = np.where(np.abs(fwhmCut-np.median(fwhmCut[fwhmchk2])) > 10.0*np.std(fwhmCut[fwhmchk2]))
     drop = np.abs(fwhmCut-np.median(fwhmCut[fwhmchk2])) > 10.0*np.std(fwhmCut[fwhmchk2])
     keep = np.abs(fwhmCut-np.median(fwhmCut[fwhmchk2])) <= 10.0*np.std(fwhmCut[fwhmchk2])
@@ -216,17 +215,17 @@ def escut(image, pos_file, fwhm, peak):
     
     with open('escutVBAD_i.pos','w+') as f:
         for i,blah in enumerate(xCut[fwchk]):
-            print >> f, (xCut[fwchk])[i], (yCut[fwchk])[i]
+            print((xCut[fwchk])[i], (yCut[fwchk])[i], file=f)
             
     with open('escut_i.pos','w+') as f:
         for i,blah in enumerate(xCut):
             if not drop[i]:
-                print >> f, xCut[i], yCut[i], magCut2[i], fwhmCut[i], magCut1[i]
+                print(xCut[i], yCut[i], magCut2[i], fwhmCut[i], magCut1[i], file=f)
     
     with open('escut_g.pos','w+') as f:
         for i,blah in enumerate(xCut):
             if not drop[i]:
-                print >> f, xCut[i], yCut[i], magCut2[i], fwhmCut[i], magCut1[i]
+                print(xCut[i], yCut[i], magCut2[i], fwhmCut[i], magCut1[i], file=f)
     
     plt.fill_betweenx(bin_centers, peakVal+bin_hw, peakVal-bin_hw, facecolor='red', edgecolor='none', alpha=0.4, label='2x RMS sigma clipping region')
 
@@ -280,9 +279,9 @@ def main():
     apcor_std_i = apcor_std[1]
     apcor_sem_g = apcor_sem[0]
     apcor_sem_i = apcor_sem[1]
-    print 'Aperture correction :: g = {0:7.4f} : i = {1:7.4f}'.format(apcor_g,apcor_i)
-    print 'Aperture corr. StD. :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_std_g,apcor_std_i)
-    print 'Aperture corr. SEM  :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_sem_g,apcor_sem_i)
+    print('Aperture correction :: g = {0:7.4f} : i = {1:7.4f}'.format(apcor_g,apcor_i))
+    print('Aperture corr. StD. :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_std_g,apcor_std_i))
+    print('Aperture corr. SEM  :: g = {0:6.4f} : i = {1:6.4f}'.format(apcor_sem_g,apcor_sem_i))
     
     ap_ix,ap_iy = np.loadtxt('getfwhm_i.log',usecols=(0,1),unpack=True)
     ap_mag_i = np.loadtxt('getfwhm_i.log',usecols=(5,),dtype=str,unpack=True)

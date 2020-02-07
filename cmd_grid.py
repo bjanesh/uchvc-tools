@@ -1,4 +1,3 @@
-#! /usr/local/bin/python
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,13 +21,13 @@ naxis1, naxis2 = hdu.header['NAXIS1'], hdu.header['NAXIS2']
 w = wcs.WCS(hdu.header)
 ra_c0, dec_c0 = w.all_pix2world(0,0,1)
 ra_cN, dec_cN = w.all_pix2world(naxis1,naxis2,1)
-print ra_c0, dec_c0, ra_cN-ra_c0, dec_cN-dec_c0
+print(ra_c0, dec_c0, ra_cN-ra_c0, dec_cN-dec_c0)
 
 mag_file = 'calibrated_mags.dat'
 
 # read in magnitudes, colors, and positions(x,y)
 gxr,gyr,g_magr,g_ierrr,ixr,iyr,i_magr,i_ierrr,gmir= np.loadtxt(mag_file,usecols=(0,1,2,3,4,5,6,7,8),unpack=True)
-print len(gxr), "total stars"
+print(len(gxr), "total stars")
 
 # filter out the things with crappy color errors
 color_error_cut = np.sqrt(2.0)*0.2
@@ -46,9 +45,9 @@ i_ierr = np.array([i_ierrr[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < col
 gmi = np.array([gmir[i] for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))])
 gmi_err = np.array([np.sqrt(g_ierrr[i]**2 + i_ierrr[i]**2) for i in range(len(gxr)) if (abs(gmi_errr[i] < color_error_cut and i_ierrr[i] < mag_error_cut))])
 
-print len(gx), "after color+mag error cut"
+print(len(gx), "after color+mag error cut")
 # nid = np.loadtxt(mag_file,usecols=(0,),dtype=int,unpack=True)
-pixcrd = zip(ix,iy)
+pixcrd = list(zip(ix,iy))
 
 world = w.all_pix2world(pixcrd, 1)
 ra_c, dec_c = w.all_pix2world(0,0,1)
@@ -68,7 +67,7 @@ ycenters= 0.5*(yedges[1:]+yedges[:-1])
 # for i,b in enumerate(bin_id[0]):
 #     print bin_id[0][i], bin_id[1][i], xedges[i], yedges[i], bin_count[i]
 
-print bin_count, np.sum(bin_count), np.median(bin_count), np.std(bin_count)
+print(bin_count, np.sum(bin_count), np.median(bin_count), np.std(bin_count))
 
 fig=plt.figure(3)#, figsize=(22,17))  
 fig.subplots_adjust(hspace=0.0, wspace=0.0)  
@@ -83,7 +82,7 @@ for x in range(5):
         with open('grid'+repr(x)+repr(y)+'.reg','w+') as grid:
             for i in range(len(ix[bin_stars])):
                 # if gmiBIN[i] > 1 and gmiBIN[i] <1.5 and i_magBIN[i] > 22.:
-                print >> grid, ix[bin_stars][i], iy[bin_stars][i]
+                print(ix[bin_stars][i], iy[bin_stars][i], file=grid)
         
         ax = plt.subplot2grid((5,5),(4-y,4-x))
         plt.scatter(gmiBIN, i_magBIN, color='black', marker='o', s=3, edgecolors='none')

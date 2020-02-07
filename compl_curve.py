@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import os
 import numpy as np
 from pyraf import iraf
@@ -109,7 +107,7 @@ for j,mag in enumerate(g0):
         color_new = gcaljs - icaljs
         color_diff = color_guess-color_new
         color_guess = color_new
-        print j, gcaljs, icaljs, color_new
+        print(j, gcaljs, icaljs, color_new)
     gmagjs.append(gcaljs)
     imagjs.append(icaljs)
 
@@ -151,7 +149,7 @@ for n,gmi in enumerate(gmi_a):
         g0c = ((gmi - zpgi)/mugi) + i0c
         compi_interp = compi[k]
         if k==0:
-            print '{:4.1f} {:7.4f} {:7.4f} {:7.4f} {:7.4f} {:7.4f} {:7.4f}'.format(gmi, i0c, g0c, g0c-i0c, i0cjs, g0cjs, g0cjs-i0cjs)# i0c-i0cjs, g0c-g0cjs)
+            print('{:4.1f} {:7.4f} {:7.4f} {:7.4f} {:7.4f} {:7.4f} {:7.4f}'.format(gmi, i0c, g0c, g0c-i0c, i0cjs, g0cjs, g0cjs-i0cjs))# i0c-i0cjs, g0c-g0cjs)
 #     for k in range(len(ibin)):
 #         i0c = ibin[k] - eps_i*gmi - zp_i
 #         g0c = gmi + i0c

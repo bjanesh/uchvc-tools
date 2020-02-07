@@ -23,7 +23,7 @@ def main():
     fig = plt.figure(figsize=(9,4))
     outer = gridspec.GridSpec(1,1, wspace=0.1, hspace=0.1)
     for i, obj in enumerate(objects.keys()):
-        print obj
+        print(obj)
         inner = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=outer[i], wspace=0.1, hspace=0.1)
         # set up some filenames
         folder = '/Volumes/galileo/uchvc/targets/'+obj.lower()+'/'
@@ -65,7 +65,7 @@ def main():
         # print gmi_errAVG
         # print len(gx), "after color+mag error cut"
         # nid = np.loadtxt(mag_file,usecols=(0,),dtype=int,unpack=True)
-        pixcrd = zip(ix,iy)
+        pixcrd = list(zip(ix,iy))
         
         
         # print "Reading WCS info from image header..."
@@ -122,7 +122,7 @@ def main():
             cm_filter, gi_iso, i_m_iso = make_filter(dm, filter_file)
             stars_f = filter_sources(i_mag, i_ierr, gmi, gmi_err, cm_filter, filter_sig = 1)
         
-            xy_points = zip(i_ra,i_dec)
+            xy_points = list(zip(i_ra,i_dec))
         
             # make new vectors containing only the filtered points
             
@@ -154,8 +154,8 @@ def main():
             
             hi_c_ra, hi_c_dec = getHIellipse(obj, ra_corner, dec_corner, centroid=True)
             sep = dist2HIcentroid(ra_c_d, dec_c_d, hi_c_ra, hi_c_dec)
-            print 'm-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)
-            print >> search, '{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct)
+            print('m-M = {:5.2f} | d = {:4.2f} Mpc | α = {:s}, δ = {:s}, Δʜɪ = {:5.1f}" | N = {:4d} | σ = {:6.3f} | ξ = {:6.3f}%'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct))
+            print('{:5.2f} {:4.2f} {:s} {:s} {:5.1f} {:4d} {:6.3f} {:6.3f}'.format(dm, mpc, ra_c_d, dec_c_d, sep, n_in_filter, S[x_cent_S][y_cent_S], pct), file=search)
         
         ax1 = plt.Subplot(fig, inner[0])
         ax1.imshow(np.transpose(sig_bins), cmap=plt.cm.Reds, extent=(22, 27, 22, 2))#, origin=origin)

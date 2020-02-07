@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os
 import numpy as np
 import matplotlib.pylab as plt
@@ -60,7 +59,7 @@ def bkg_boxes(frame,nboxes,length,sources=False):
                 mean, median, std = sigma_clipped_stats(box, sigma=3.0, iters=10)
                 if sources == False:
                     bg_stats.append((mean, median, std))
-                    print >> logfile, "{:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f}".format(x1,y1,x2,y2,mean,median,std)
+                    print("{:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f}".format(x1,y1,x2,y2,mean,median,std), file=logfile)
                 if sources == True:
                     threshold = median + (std * 2.)
                     segm_img = detect_sources(box, threshold, npixels=50)
@@ -70,7 +69,7 @@ def bkg_boxes(frame,nboxes,length,sources=False):
                     mask_mean = np.mean(mask2)
                     mean_mask, median_mask, std_mask = sigma_clipped_stats(box, sigma=3.0, mask=mask2)
                     bg_stats.append((mean_mask, median_mask, std_mask))
-                    print >> logfile, "{:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f}".format(x1,y1,x2,y2,mean_mask,median_mask,std_mask)
+                    print("{:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f} {:10.3f}".format(x1,y1,x2,y2,mean_mask,median_mask,std_mask), file=logfile)
                 
         bg_stats = np.reshape(np.array(bg_stats),(len(bg_stats),3))
         centers = np.reshape(np.array(centers),(len(centers),2))
@@ -108,5 +107,5 @@ if __name__ == '__main__':
     
     bgm_g, bg_g, cen = bkg_boxes(fits_g, 1000, 20.0, sources=True)
     bgm_i, bg_i, cen = bkg_boxes(fits_i, 1000, 10.0, sources=True)
-    print 'Image mean BG sigma value :: g = {0:5.3f} : i = {1:5.3f}'.format(bg_g,bg_i)
-    print 'Image mean BG median value :: g = {0:5.3f} : i = {1:5.3f}'.format(bgm_g,bgm_i)
+    print('Image mean BG sigma value :: g = {0:5.3f} : i = {1:5.3f}'.format(bg_g,bg_i))
+    print('Image mean BG median value :: g = {0:5.3f} : i = {1:5.3f}'.format(bgm_g,bgm_i))

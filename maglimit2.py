@@ -1,4 +1,3 @@
-#! /usr/local/bin/python
 import os, sys
 import numpy as np
 from pyraf import iraf
@@ -28,7 +27,7 @@ def getHImass(object, dm):
     logm = float(mass[coord])
     mass = mpc*mpc*10**logm  # make sure to scale by the distance in Mpc^2
     
-    print '{:3.1f}'.format(np.log10(mass))
+    print('{:3.1f}'.format(np.log10(mass)))
     return mass
 
 def main():
@@ -38,10 +37,10 @@ def main():
     title_string = steps[-1].upper()        # which should always exist in the directory
     coords_file = 'region_coords.dat'
     # dm = 26.07
-    print "computing magnitude estimates for", title_string
+    print("computing magnitude estimates for", title_string)
     # dm = float(raw_input("Enter the distance modulus: "))
     dm = float(sys.argv[1])
-    print "at a distance modulus of", dm
+    print("at a distance modulus of", dm)
 
     if not os.path.isfile(title_string+'_i_masked.fits'):
 
@@ -60,8 +59,8 @@ def main():
         # iraf.tv.tvmark(frame=1, coords='bright_stars.dat', radii="98,99,100,101,102,103", color=208)
 
         while not os.path.isfile('regions.txt') :
-            print 'Mask out bright stars indicated and other obvious things and save as regions.txt'
-            raw_input("Press Enter when finished:")
+            print('Mask out bright stars indicated and other obvious things and save as regions.txt')
+            input("Press Enter when finished:")
 
         iraf.images.imcopy(title_string+'_i.fits',title_string+'_i_masked.fits',verbose="yes")
 
@@ -95,7 +94,7 @@ def main():
         with open('bright_stars.dat','w+') as f1:
             for i in range(len(ix)):
                 if imag[i] < 18.0 :
-                    print >> f1, ix[i], iy[i], imag[i]
+                    print(ix[i], iy[i], imag[i], file=f1)
 
         iraf.images.imcopy(title_string+'_g.fits',title_string+'_g_masked.fits',verbose="yes")
 
@@ -208,8 +207,8 @@ def main():
     error_g = np.sqrt(fl_g/ epadu + areas * stdev_g**2 + areas**2 * stdev_g**2 / nsky_g)
     merr_g = 1.0857 * error_g / fl_g
 
-    print fl_i,mag_i,merr_i
-    print fl_g,mag_g,merr_g
+    print(fl_i,mag_i,merr_i)
+    print(fl_g,mag_g,merr_g)
 
     flux_g, flux_i, merrs_g, merrs_i = [], [], [], []
     rs = np.array([51, 77, 90, 180]) # 2' cell, 3' cell, 3' diam, 3' radius
@@ -289,10 +288,10 @@ def main():
     ami = float(photcalLines[26].split()[5])
     photcalFile.close()
 
-    print amg, ami
+    print(amg, ami)
 
     if not os.path.isfile('extinction.tbl.txt'):
-        print 'Fetching extinction table for',fits_h_i[0].header['RA'],fits_h_i[0].header['DEC']
+        print('Fetching extinction table for',fits_h_i[0].header['RA'],fits_h_i[0].header['DEC'])
         getexttbl(fits_h_i[0].header['RA'],fits_h_i[0].header['DEC'])
 
     LamEff,A_over_E_B_V_SandF,A_SandF,A_over_E_B_V_SFD,A_SFD= np.genfromtxt('extinction.tbl.txt', usecols=(2,3,4,5,6),unpack=True,skip_header=27,skip_footer=12)
@@ -306,7 +305,7 @@ def main():
         if A_id[j] == 'i':
             cal_A_i = A_over_E_B_V_SandF[j]*0.86*E_B_V
 
-    print 'Reddening correction :: g = {0:7.4f} : i = {1:7.4f}'.format(cal_A_g,cal_A_i)
+    print('Reddening correction :: g = {0:7.4f} : i = {1:7.4f}'.format(cal_A_g,cal_A_i))
 
     tolerance = 0.0001
 
@@ -320,11 +319,11 @@ def main():
     good_g, good_i = np.loadtxt(os.path.dirname(os.path.abspath(__file__))+'sdssBVR.dat', usecols=(21,23), dtype=bool, unpack=True)
 
     good = np.where((v_magr-g_magr < 0.5) & (v_magr-g_magr > -1.5) & good_g & good_i)
-    print good[0].size, v_magr.size
+    print(good[0].size, v_magr.size)
     v, g, i = v_magr[good], g_magr[good], i_magr[good]
 
     p = np.polyfit(g-i, v-g, 3)
-    print p
+    print(p)
 
     fit = np.poly1d(p)
 
@@ -339,7 +338,7 @@ def main():
     rms = np.sqrt(np.sum(res*res)/(res.size-4))
     var = np.sum((y_data-np.mean(y_data))**2)/(y_fit.size-1)
     chi_sq = np.sum(res*res/var)/(res.size-4)
-    print rms, chi_sq
+    print(rms, chi_sq)
 
     # plt.scatter(g-i,v-g, edgecolors='none')
     # plt.plot(xplt, yplt, c='red')
@@ -353,8 +352,8 @@ def main():
     rs = np.array([51, 77, 90, 180, 51, 77, 90, 180])
 
     with open('optical_props.txt', 'w+') as opt:
-        print '# ap     g   ge     i   ie  g-i Eg-i    Mg    Mi    MV  M/L L*      MHI   M*  Hi/*'
-        print >> opt, '# ap     g   ge     i   ie  g-i Eg-i    Mg    Mi    MV  M/L L*      MHI   M*  Hi/*'
+        print('# ap     g   ge     i   ie  g-i Eg-i    Mg    Mi    MV  M/L L*      MHI   M*  Hi/*')
+        print('# ap     g   ge     i   ie  g-i Eg-i    Mg    Mi    MV  M/L L*      MHI   M*  Hi/*', file=opt)
         for i,r in enumerate(rs):
             color_guess = 0.0
             color_diff = 1.0
@@ -380,8 +379,8 @@ def main():
             l_star = np.power(10,(i_sun-i_abs)/2.5)
             m_star = l_star*mtol
             hitostar = m_hi/m_star
-            print ' {:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:4.2f} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,v_abs,mtol,np.log10(l_star),np.log10(m_hi),np.log10(m_star),hitostar)
-            print >> opt, ' {:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:4.2f} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,v_abs,mtol,np.log10(l_star),np.log10(m_hi),np.log10(m_star),hitostar)
+            print(' {:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:4.2f} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,v_abs,mtol,np.log10(l_star),np.log10(m_hi),np.log10(m_star),hitostar))
+            print(' {:3d} {:5.2f} {:4.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:5.2f} {:5.2f} {:5.2f} {:4.2f} {:4.2f} {:4.2f} {:4.2f} {:5.1f}'.format(r,g_mag,me_g[i],i_mag,me_i[i],g_mag-i_mag,e_gmi,g_abs,i_abs,v_abs,mtol,np.log10(l_star),np.log10(m_hi),np.log10(m_star),hitostar), file=opt)
     # 
     for file_ in ["area.txdump","mag_area.dat","mag_est_g.dat","phot_region_g.txdump","mag_est_i.dat","phot_region_i.txdump"]:
         os.remove(file_)
