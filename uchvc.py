@@ -55,12 +55,12 @@ home_root = os.environ['HOME']
 funpack_path = home_root+'/bin/funpack'
 iraf.images(_doprint=0)
 iraf.tv(_doprint=0)
-iraf.ptools(_doprint=0)
 iraf.noao(_doprint=0)
 iraf.digiphot(_doprint=0)
 iraf.photcal(_doprint=0)
 iraf.apphot(_doprint=0)  
 iraf.imutil(_doprint=0)
+iraf.ptools(_doprint=0)
 
 threshold = float(sys.argv[1])
 
