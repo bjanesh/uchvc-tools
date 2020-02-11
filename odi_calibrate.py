@@ -1,3 +1,4 @@
+from __future__ import print_function
 """"odi_calibrate.py
 Based on a set of sm and cl scripts written by Steven Janowiecki
 Intented as an alternative to QuickReduce photometric calibration

@@ -1,3 +1,4 @@
+from __future__ import print_function
 def escut(image, pos_file, fwhm, peak):
     # input image file name, file name with matched source positions, **np.array of fwhm measurements for each source
     import numpy as np
